@@ -1,0 +1,8 @@
+import { HttpInterceptorFn } from "@angular/common/http";
+
+export const authInterceptor: HttpInterceptorFn = (request, next) => {
+  const raw = localStorage.getItem("sentinel-session");
+  if (!raw) return next(request);
+  const session = JSON.parse(raw) as { token: string };
+  return next(request.clone({ setHeaders: { Authorization: `Bearer ${session.token}` } }));
+};

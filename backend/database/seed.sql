@@ -1,0 +1,2 @@
+-- Load the compatible schema and demonstration data from backend/database/legacy.
+-- This file is intentionally non-destructive.

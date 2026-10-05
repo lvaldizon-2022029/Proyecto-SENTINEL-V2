@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: SENTINEL API
+  version: 1.0.0
+  description: API de coordinación de alertas, bienestar y respuesta ante emergencias.
+servers:
+  - url: http://localhost:8082
+paths:
+  /health:
+    get:
+      summary: Estado del servicio
+      responses:
+        '200': { description: Servicio disponible }
+  /Sentinel/Auth/register:
+    post:
+      summary: Registrar usuario
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/RegisterRequest' } }
+      responses:
+        '201': { description: Usuario registrado }
+  /Sentinel/Auth/login:
+    post:
+      summary: Iniciar sesión y obtener JWT
+      responses:
+        '200': { description: Sesión iniciada }
+        '401': { description: Credenciales inválidas }
+  /Sentinel/Alertas:
+    get:
+      summary: Listar alertas con búsqueda y paginación
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100 } }
+      responses:
+        '200': { description: Lista paginada }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [nombreUsers, emailUsers, contrasenaUsers]
+      properties:
+        nombreUsers: { type: string }
+        emailUsers: { type: string, format: email }
+        contrasenaUsers: { type: string, format: password, minLength: 8 }
