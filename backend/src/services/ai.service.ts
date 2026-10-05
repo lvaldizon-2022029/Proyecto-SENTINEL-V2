@@ -30,7 +30,7 @@ export class AiService {
         signal: controller.signal,
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
         body: JSON.stringify({
-          model: process.env.GROQ_MODEL ?? "meta-llama/llama-4-scout-17b-16e-instruct",
+          model: process.env.GROQ_MODEL ?? "qwen/qwen3.8-27b",
           temperature: 0.3,
           messages: [{ role: "system", content: system }, { role: "user", content: prompt }]
         })
