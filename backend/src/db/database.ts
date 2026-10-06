@@ -11,7 +11,7 @@ const rowToUser = (row: Record<string, unknown>): User => ({
   contrasenaUsers: String(row.contrasenaUsers),
   rolUsers: String(row.rolUsers) as Role,
   pinemergenciaUsers: String(row.pinemergenciaUsers ?? "0000"),
-  fechaCreacion: new Date(String(row.fechaCreacion)).toISOString(),
+  fechaCreacion: row.fechaCreacion ? new Date(row.fechaCreacion as string | Date).toISOString() : new Date().toISOString(),
   fotoUrl: row.fotoUrl ? String(row.fotoUrl) : null
 });
 
