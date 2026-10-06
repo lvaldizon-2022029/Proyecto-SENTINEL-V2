@@ -32,7 +32,7 @@ CREATE TABLE `users` (
   `rolUsers` varchar(20) DEFAULT NULL,
   `pinemergenciaUsers` varchar(10) DEFAULT NULL,
   `fechaCreacion` datetime DEFAULT CURRENT_TIMESTAMP,
-  `fotoUrl` varchar(255) DEFAULT NULL,
+  `fotoUrl` mediumtext,
   PRIMARY KEY (`idUsers`),
   UNIQUE KEY `emailUsers` (`emailUsers`),
   KEY `idx_user_email` (`emailUsers`),

@@ -21,6 +21,7 @@ export class MySqlStore {
   close(): Promise<void> { return this.pool.end(); }
 
   async initialize(): Promise<void> {
+    await this.pool.execute("ALTER TABLE users MODIFY COLUMN fotoUrl MEDIUMTEXT NULL");
     const [rows] = await this.pool.query("SELECT idUsers FROM users LIMIT 1");
     if ((rows as unknown[]).length === 0) {
       await this.createUser({

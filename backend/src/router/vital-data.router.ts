@@ -4,12 +4,22 @@ import { AuthenticatedRequest } from "../models/types";
 import { authenticate, crudRouter, requireRole } from "./middleware";
 
 export const vitalDataRouter = Router();
+const toVitalDataResponse = (item: Record<string, unknown>) => ({
+  ...item,
+  id: Number(item.id ?? item.idUser),
+  idUser: Number(item.idUser ?? item.id),
+  grupoSanguineo: item.grupoSanguineo ?? item.gruposanguineoUser ?? "",
+  alergias: item.alergias ?? item.alergiasUser ?? "",
+  enfermedadesCronicas: item.enfermedadesCronicas ?? item.enfermedadescronicasUser ?? "",
+  contactoEmergencia: item.contactoEmergencia ?? item.contactoemergenciaUser ?? ""
+});
+
 vitalDataRouter.get("/:id", authenticate, requireRole("USER", "ADMIN"), async (req, res, next) => {
   const rawId = String(req.params.id);
   if (!/^\d+$/.test(rawId)) return next();
   const id = Number(rawId);
   const item = (await store.collection("vitalData")).find((entry) => entry.id === id || entry.idUser === id);
-  if (item) return res.json(item);
+  if (item) return res.json(toVitalDataResponse(item));
   const user = (req as Request & AuthenticatedRequest).user;
   if (!user) return res.status(401).json({ error: "No autorizado" });
   if (user.rolUsers === "USER" && user.idUsers !== id) return res.status(403).json({ error: "No puedes consultar los datos vitales de otro usuario." });
@@ -17,10 +27,10 @@ vitalDataRouter.get("/:id", authenticate, requireRole("USER", "ADMIN"), async (r
 });
 vitalDataRouter.use(crudRouter("/Sentinel/VitalData", "vitalData", ["USER", "ADMIN"]));
 export const vitalDataLegacyRouter = Router();
-vitalDataLegacyRouter.get("/get", authenticate, requireRole("USER", "ADMIN"), async (_req, res) => res.json(await store.collection("vitalData")));
+vitalDataLegacyRouter.get("/get", authenticate, requireRole("USER", "ADMIN"), async (_req, res) => res.json((await store.collection("vitalData")).map(toVitalDataResponse)));
 vitalDataLegacyRouter.get("/getid/:id", authenticate, requireRole("USER", "ADMIN"), async (req, res) => {
   const item = (await store.collection("vitalData")).find((entry) => entry.id === Number(req.params.id));
-  return item ? res.json(item) : res.status(404).json({ error: "Datos vitales no encontrados" });
+  return item ? res.json(toVitalDataResponse(item)) : res.status(404).json({ error: "Datos vitales no encontrados" });
 });
 vitalDataLegacyRouter.post("/", authenticate, requireRole("USER", "ADMIN"), async (req, res) =>
   res.status(201).json(await store.create("vitalData", req.body)));

@@ -15,7 +15,29 @@ import { authenticate, requireRole } from "../router/middleware";
 import { AuthenticatedRequest } from "../models/types";
 
 const app = express();
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN?.split(",") ?? true }));
+const configuredOrigins = (process.env.FRONTEND_ORIGIN ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const isAllowedOrigin = (origin: string): boolean => {
+  if (configuredOrigins.includes(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+      && (url.protocol === "http:" || url.protocol === "https:");
+  } catch {
+    return false;
+  }
+};
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || isAllowedOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Origen no permitido por CORS"));
+  }
+}));
 app.use(express.json({ limit: "1mb" }));
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "sentinel-backend", persistence: store.persistence }));
 app.use("/Sentinel/Auth", authRouter);
@@ -53,7 +75,15 @@ app.post("/Sentinel/AgendaCharlas/:id/confirmar", authenticate, requireRole("STA
 app.get("/Sentinel/VitalData/:id", authenticate, requireRole("USER", "ADMIN"), async (req, res) => {
   const id = Number(req.params.id);
   const item = (await store.collection("vitalData")).find((entry) => entry.id === id || entry.idUser === id);
-  if (item) return res.json(item);
+  if (item) return res.json({
+    ...item,
+    id: Number(item.id ?? item.idUser),
+    idUser: Number(item.idUser ?? item.id),
+    grupoSanguineo: item.grupoSanguineo ?? item.gruposanguineoUser ?? "",
+    alergias: item.alergias ?? item.alergiasUser ?? "",
+    enfermedadesCronicas: item.enfermedadesCronicas ?? item.enfermedadescronicasUser ?? "",
+    contactoEmergencia: item.contactoEmergencia ?? item.contactoemergenciaUser ?? ""
+  });
   const user = (req as Request & AuthenticatedRequest).user;
   if (user?.rolUsers === "USER" && user.idUsers !== id) return res.status(403).json({ error: "No puedes consultar los datos vitales de otro usuario." });
   return res.json({ exists: false, id, idUser: id, grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "", telefonoEmergencia: "" });

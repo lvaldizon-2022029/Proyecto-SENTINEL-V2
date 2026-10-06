@@ -1,7 +1,8 @@
 import { CommonModule } from "@angular/common";
-import { Component, inject } from "@angular/core";
+import { Component, OnDestroy, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
+import { Subscription } from "rxjs";
 import { ApiService } from "../../core/services/api.service";
 
 interface ResourceConfig {
@@ -32,20 +33,24 @@ interface ResourceConfig {
       </section>
       <section class="clinical-card page-card">
         <div class="table-toolbar"><h2>Registros ({{ filteredItems.length }})</h2></div>
-        <table class="data-table"><thead><tr><th>ID REF</th><th *ngFor="let field of config.fields">{{ field }}</th><th>Acciones</th></tr></thead>
+        <p class="muted" *ngIf="loading">Cargando registros...</p>
+        <table class="data-table" *ngIf="!loading && !error"><thead><tr><th>ID REF</th><th *ngFor="let field of config.fields">{{ field }}</th><th>Acciones</th></tr></thead>
           <tbody><tr *ngFor="let item of filteredItems"><td>{{ resourceId(item) }}</td><td *ngFor="let field of config.fields">{{ display(item[field]) }}</td>
             <td><button type="button" (click)="edit(item)">Editar</button><button *ngIf="config.key === 'agenda'" type="button" class="secondary" (click)="confirmAgenda(resourceId(item))">Confirmar</button><button *ngIf="config.canDelete !== false" type="button" class="danger" (click)="remove(resourceId(item))">Eliminar</button></td>
           </tr></tbody>
         </table>
-        <p class="muted" *ngIf="!items.length">No hay registros disponibles.</p>
+        <p class="muted" *ngIf="!loading && !error && !items.length">No hay registros disponibles.</p>
       </section>
     </main>
   `
 })
-export class ResourceComponent {
+export class ResourceComponent implements OnDestroy, OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ApiService);
-  config = this.route.snapshot.data["resource"] as ResourceConfig;
+  private routeSubscription?: Subscription;
+  private dataSubscription?: Subscription;
+  config: ResourceConfig = { title: "", path: "", fields: [] };
+  private loadedPath = "";
   items: Array<Record<string, any>> = [];
   filteredItems: Array<Record<string, any>> = [];
   form: Record<string, any> = {};
@@ -53,13 +58,46 @@ export class ResourceComponent {
   search = "";
   error = "";
   message = "";
+  loading = false;
 
-  constructor() { this.reset(); this.load(); }
-  load(): void {
-    this.api.collection(this.config.path).subscribe({
-      next: (value: any) => { this.items = Array.isArray(value) ? value : value.data ?? []; this.filter(); },
-      error: (err) => this.error = err.error?.error ?? "No se pudieron cargar los registros."
+  ngOnInit(): void {
+    this.applyResource(this.route.snapshot.data["resource"] as ResourceConfig | undefined);
+    this.routeSubscription = this.route.data.subscribe((data) => {
+      this.applyResource(data["resource"] as ResourceConfig | undefined);
     });
+  }
+  private applyResource(resource: ResourceConfig | undefined): void {
+    if (!resource || resource.path === this.loadedPath) return;
+    this.loadedPath = resource.path;
+    this.config = resource;
+    this.search = "";
+    this.items = [];
+    this.filteredItems = [];
+    this.error = "";
+    this.message = "";
+    this.loading = false;
+    this.reset();
+    this.load();
+  }
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+    this.dataSubscription?.unsubscribe();
+  }
+  load(): void {
+    this.dataSubscription?.unsubscribe();
+    this.loading = true;
+    this.error = "";
+    this.dataSubscription = this.api.collection(this.config.path).subscribe({
+      next: (value: any) => { this.items = Array.isArray(value) ? value : value.data ?? []; this.filter(); },
+      error: (err) => {
+        this.items = [];
+        this.filteredItems = [];
+        this.error = err.status === 0
+          ? "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose en http://localhost:8082."
+          : err.error?.error ?? "No se pudieron cargar los registros.";
+      }
+    });
+    this.dataSubscription.add(() => this.loading = false);
   }
   resourceId(item: Record<string, any>): number {
     return Number(item["id"] ?? item["idUsers"] ?? item["idAlertas"] ?? item["idEstaciones"] ?? item["idDespachoEmergencias"] ?? item["idAgendaCharlas"] ?? item["idStaffAutoridad"] ?? item["idCatalogoEmergencias"] ?? item["idCatalogoEntidades"] ?? item["userid"] ?? item["idUser"]);
