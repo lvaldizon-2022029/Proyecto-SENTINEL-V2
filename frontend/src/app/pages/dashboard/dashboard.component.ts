@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnDestroy, OnInit, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import * as L from "leaflet";
@@ -35,7 +35,7 @@ interface AlertItem {
           <div><small>SENTINEL • ALERTA</small><strong>Panel de Emergencias</strong></div>
         </div>
         <div class="header-actions">
-          <div class="clock"><b>{{ clock }}</b><span>{{ today }}</span></div>
+          <div class="clock"><b>{{ clock() }}</b><span>{{ today() }}</span></div>
           <div class="account">
             <b>{{ displayName | uppercase }}</b>
             <span><i></i><button (click)="logout()">Cerrar sesión</button></span>
@@ -109,8 +109,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly subscriptions = new Subscription();
-  clock = "00:00:00"; today = ""; displayName = "USUARIO"; avatarUrl = "";
+  readonly clock = signal("00:00:00"); readonly today = signal("");
+  displayName = "USUARIO"; avatarUrl = "";
   catalog: Emergency[] = []; filteredCatalog: Emergency[] = []; userAlerts: AlertItem[] = [];
   search = ""; status = ""; statusError = false; modalOpen = false; chatOpen = false;
   latitude = 14.6349; longitude = -90.5069; pendingEmergencyId?: number; pendingSilent = false;
@@ -142,10 +144,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.loadCatalog(); this.loadAlerts(); this.subscriptions.add(interval(5000).subscribe(() => this.loadAlerts()));
   }
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); this.map?.remove(); }
-  updateClock(): void { const now = new Date(); this.clock = now.toLocaleTimeString("es-GT", { hour12: false }); this.today = now.toLocaleDateString("es-GT", { weekday: "short", year: "numeric", month: "short", day: "numeric" }).toUpperCase(); }
-  loadCatalog(): void { this.api.collection("/Sentinel/CatalogoEmergencias").subscribe({ next: (value) => { this.catalog = Array.isArray(value) ? value as Emergency[] : []; this.filteredCatalog = [...this.catalog]; }, error: () => this.showStatus("Error al cargar catálogo", true) }); }
+  updateClock(): void { const now = new Date(); this.clock.set(now.toLocaleTimeString("es-GT", { hour12: false })); this.today.set(now.toLocaleDateString("es-GT", { weekday: "short", year: "numeric", month: "short", day: "numeric" }).toUpperCase()); }
+  loadCatalog(): void { this.api.collection("/Sentinel/CatalogoEmergencias").subscribe({ next: (value) => { this.catalog = Array.isArray(value) ? value as Emergency[] : []; this.filteredCatalog = [...this.catalog]; this.changeDetector.detectChanges(); }, error: () => { this.showStatus("Error al cargar catálogo", true); this.changeDetector.detectChanges(); } }); }
   filterCatalog(): void { const value = this.search.toLowerCase(); this.filteredCatalog = this.catalog.filter((item) => String(item.nombreCatalogoEmergencias ?? "").toLowerCase().includes(value)); }
-  loadAlerts(): void { this.api.getAlerts().subscribe({ next: (value) => { const items = Array.isArray(value) ? value : value.data; const userId = this.auth.session()?.idUsers; this.userAlerts = (items as AlertItem[]).filter((item) => Number(item.ciudadanoId ?? item.usuario?.idUsers ?? item.usuario?.id) === userId); }, error: () => this.userAlerts = [] }); }
+  loadAlerts(): void { this.api.getAlerts().subscribe({ next: (value) => { const items = Array.isArray(value) ? value : value.data; const userId = this.auth.session()?.idUsers; this.userAlerts = (items as AlertItem[]).filter((item) => Number(item.ciudadanoId ?? item.usuario?.idUsers ?? item.usuario?.id) === userId); this.changeDetector.detectChanges(); }, error: () => { this.userAlerts = []; this.changeDetector.detectChanges(); } }); }
   openAlert(id?: number, silent = false): void { if (!id) return; if (this.userAlerts.some((item) => this.isEditable(item))) { this.showStatus("Existe una alerta activa en resolución", true); return; } this.pendingEmergencyId = id; this.pendingSilent = silent; this.modalOpen = true; this.getLocation(); }
   sendSilentAlert(): void { const panic = this.catalog.find((item) => String(item.nombreCatalogoEmergencias ?? "").toUpperCase().includes("PÁNICO")); if (!panic?.idCatalogoEmergencias) { this.showStatus("No se encontró la categoría PÁNICO", true); return; } this.openAlert(panic.idCatalogoEmergencias, true); }
   getLocation(): void { if (!navigator.geolocation) { this.initMap(); return; } navigator.geolocation.getCurrentPosition((position) => { this.latitude = position.coords.latitude; this.longitude = position.coords.longitude; this.initMap(); this.showStatus("GPS integrado"); }, () => this.initMap()); }

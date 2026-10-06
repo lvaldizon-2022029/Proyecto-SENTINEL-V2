@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnInit, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ApiService } from "../../core/services/api.service";
 import { AuthService } from "../../core/services/auth.service";
@@ -24,9 +24,10 @@ interface DiaryEntry { id?: number; titulo?: string; contenido?: string; fecha?:
 })
 export class DiarioComponent implements OnInit {
   private readonly api = inject(ApiService); private readonly auth = inject(AuthService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   title = ""; content = ""; message = ""; error = ""; entries: DiaryEntry[] = []; selected?: DiaryEntry;
   ngOnInit(): void { this.load(); }
-  load(): void { this.api.diary(this.auth.session()?.idUsers ?? 0).subscribe({ next: (value: any) => this.entries = Array.isArray(value) ? value : [], error: () => this.error = "No se pudo cargar el historial." }); }
+  load(): void { this.api.diary(this.auth.session()?.idUsers ?? 0).subscribe({ next: (value: any) => { this.entries = Array.isArray(value) ? value : []; this.changeDetector.detectChanges(); }, error: () => { this.error = "No se pudo cargar el historial."; this.changeDetector.detectChanges(); } }); }
   select(entry: DiaryEntry): void { this.selected = entry; this.title = entry.titulo ?? ""; this.content = entry.contenido ?? ""; this.message = ""; }
   newEntry(): void { this.selected = undefined; this.title = ""; this.content = ""; this.message = ""; }
   save(): void {

@@ -74,6 +74,8 @@ app.post("/Sentinel/AgendaCharlas/:id/confirmar", authenticate, requireRole("STA
 });
 app.get("/Sentinel/VitalData/:id", authenticate, requireRole("USER", "ADMIN"), async (req, res) => {
   const id = Number(req.params.id);
+  const user = (req as Request & AuthenticatedRequest).user;
+  if (user?.rolUsers === "USER" && user.idUsers !== id) return res.status(403).json({ error: "No puedes consultar los datos vitales de otro usuario." });
   const item = (await store.collection("vitalData")).find((entry) => entry.id === id || entry.idUser === id);
   if (item) return res.json({
     ...item,
@@ -84,8 +86,6 @@ app.get("/Sentinel/VitalData/:id", authenticate, requireRole("USER", "ADMIN"), a
     enfermedadesCronicas: item.enfermedadesCronicas ?? item.enfermedadescronicasUser ?? "",
     contactoEmergencia: item.contactoEmergencia ?? item.contactoemergenciaUser ?? ""
   });
-  const user = (req as Request & AuthenticatedRequest).user;
-  if (user?.rolUsers === "USER" && user.idUsers !== id) return res.status(403).json({ error: "No puedes consultar los datos vitales de otro usuario." });
   return res.json({ exists: false, id, idUser: id, grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "", telefonoEmergencia: "" });
 });
 app.use("/Sentinel/VitalData", vitalDataRouter);

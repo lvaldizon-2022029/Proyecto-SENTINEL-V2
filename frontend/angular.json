@@ -9,7 +9,7 @@
       "prefix": "sentinel",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular/build:application",
           "options": {
             "outputPath": "dist/sentinel-frontend",
             "index": "src/index.html",
@@ -24,7 +24,8 @@
                 "output": "assets/leaflet"
               }
             ],
-            "styles": ["src/styles.css"]
+            "styles": ["src/styles.css"],
+            "allowedCommonJsDependencies": ["leaflet"]
           },
           "configurations": {
             "production": {
@@ -40,6 +41,12 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": { "buildTarget": "sentinel-frontend:build" }
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "buildTarget": "sentinel-frontend:build"
+          }
         }
       }
     }

@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
 import { ApiService } from "../../core/services/api.service";
@@ -63,6 +63,7 @@ export class BienestarComponent {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   userName = this.auth.session()?.nombreUsers || this.auth.session()?.emailUsers || "USUARIO";
   prompt = ""; error = ""; loading = false; groundingOpen = false; crisisOpen = false;
   suggestions = ["Estoy ansioso/a", "Necesito hablar", "No puedo dormir"];
@@ -74,8 +75,8 @@ export class BienestarComponent {
     const text = this.prompt.trim(); if (!text || this.loading) return;
     this.messages.push({ text, user: true, time: this.now() }); this.prompt = ""; this.error = ""; this.loading = true;
     this.api.askAi("wellbeing", this.auth.session()?.idUsers ?? 0, text).subscribe({
-      next: (value) => { this.messages.push({ text: value.respuesta, user: false, time: this.now() }); this.loading = false; },
-      error: (error) => { this.messages.push({ text: error.error?.error ?? "El proveedor de IA no está disponible.", user: false, time: this.now() }); this.loading = false; }
+      next: (value) => { this.messages.push({ text: value.respuesta, user: false, time: this.now() }); this.loading = false; this.changeDetector.detectChanges(); },
+      error: (error) => { this.messages.push({ text: error.error?.error ?? "El proveedor de IA no está disponible.", user: false, time: this.now() }); this.loading = false; this.changeDetector.detectChanges(); }
     });
   }
   now(): string { return new Date().toLocaleTimeString("es-GT", { hour: "2-digit", minute: "2-digit" }); }

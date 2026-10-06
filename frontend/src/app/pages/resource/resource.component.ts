@@ -1,8 +1,8 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnDestroy, OnInit, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, Input, OnDestroy, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute } from "@angular/router";
-import { Subscription } from "rxjs";
+import { finalize, Subscription } from "rxjs";
 import { ApiService } from "../../core/services/api.service";
 
 interface ResourceConfig {
@@ -47,8 +47,10 @@ interface ResourceConfig {
 export class ResourceComponent implements OnDestroy, OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(ApiService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   private routeSubscription?: Subscription;
   private dataSubscription?: Subscription;
+  @Input() resource?: ResourceConfig;
   config: ResourceConfig = { title: "", path: "", fields: [] };
   private loadedPath = "";
   items: Array<Record<string, any>> = [];
@@ -61,7 +63,7 @@ export class ResourceComponent implements OnDestroy, OnInit {
   loading = false;
 
   ngOnInit(): void {
-    this.applyResource(this.route.snapshot.data["resource"] as ResourceConfig | undefined);
+    this.applyResource(this.resource ?? this.route.snapshot.data["resource"] as ResourceConfig | undefined);
     this.routeSubscription = this.route.data.subscribe((data) => {
       this.applyResource(data["resource"] as ResourceConfig | undefined);
     });
@@ -87,17 +89,22 @@ export class ResourceComponent implements OnDestroy, OnInit {
     this.dataSubscription?.unsubscribe();
     this.loading = true;
     this.error = "";
-    this.dataSubscription = this.api.collection(this.config.path).subscribe({
-      next: (value: any) => { this.items = Array.isArray(value) ? value : value.data ?? []; this.filter(); },
+    this.dataSubscription = this.api.collection(this.config.path).pipe(
+      finalize(() => {
+        this.loading = false;
+        this.changeDetector.detectChanges();
+      })
+    ).subscribe({
+      next: (value: any) => { this.items = Array.isArray(value) ? value : value.data ?? []; this.filter(); this.changeDetector.detectChanges(); },
       error: (err) => {
         this.items = [];
         this.filteredItems = [];
         this.error = err.status === 0
           ? "No se pudo conectar con el servidor. Verifica que el backend esté ejecutándose en http://localhost:8082."
           : err.error?.error ?? "No se pudieron cargar los registros.";
+        this.changeDetector.detectChanges();
       }
     });
-    this.dataSubscription.add(() => this.loading = false);
   }
   resourceId(item: Record<string, any>): number {
     return Number(item["id"] ?? item["idUsers"] ?? item["idAlertas"] ?? item["idEstaciones"] ?? item["idDespachoEmergencias"] ?? item["idAgendaCharlas"] ?? item["idStaffAutoridad"] ?? item["idCatalogoEmergencias"] ?? item["idCatalogoEntidades"] ?? item["userid"] ?? item["idUser"]);

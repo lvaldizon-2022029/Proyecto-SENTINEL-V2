@@ -75,6 +75,7 @@ test("legacy operational endpoints remain available", async () => {
 
   const ai = await request(app)
     .post("/Sentinel/AI/consultar")
+    .set("Authorization", `Bearer ${token}`)
     .send({ userId: 1, prompt: "¿Qué debo hacer ante una emergencia?" });
   assert.ok([200, 429, 502, 503, 504].includes(ai.status));
   if (ai.status === 200) assert.ok(ai.body.respuesta);

@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnInit, inject } from "@angular/core";
+import { ChangeDetectorRef, Component, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
 import { ApiService } from "../../core/services/api.service";
@@ -55,6 +55,7 @@ export class PerfilVitalComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
   readonly bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
   data: VitalForm = { grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "" };
   userName = ""; email = ""; role = "USER"; userId = 0; initials = "U"; avatarUrl = ""; updatedAt = ""; message = ""; error = ""; loading = false; recordExists = false;
@@ -62,15 +63,15 @@ export class PerfilVitalComponent implements OnInit {
   ngOnInit(): void {
     const session = this.auth.session(); if (!session) { void this.router.navigateByUrl("/login"); return; }
     this.userId = session.idUsers; this.email = session.emailUsers; this.role = session.rolUsers;
-    this.api.collection(`/Sentinel/Users/${this.userId}`).subscribe({ next: (user: any) => { this.userName = user.nombreUsers ?? user.nombre ?? this.email; this.avatarUrl = user.fotoUrl || this.fallbackAvatar(this.userName); this.initials = this.userName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); } });
-    this.api.collection(`/Sentinel/VitalData/${this.userId}`).subscribe({ next: (value: any) => { this.recordExists = value?.exists !== false; this.updatedAt = value?.ultimaActualizacion ?? value?.fechaActualizacion ?? ""; this.data = { ...this.data, ...value }; }, error: () => this.error = "No se pudieron cargar los datos vitales." });
+    this.api.collection(`/Sentinel/Users/${this.userId}`).subscribe({ next: (user: any) => { this.userName = user.nombreUsers ?? user.nombre ?? this.email; this.avatarUrl = user.fotoUrl || this.fallbackAvatar(this.userName); this.initials = this.userName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); this.changeDetector.detectChanges(); } });
+    this.api.collection(`/Sentinel/VitalData/${this.userId}`).subscribe({ next: (value: any) => { this.recordExists = value?.exists !== false; this.updatedAt = value?.ultimaActualizacion ?? value?.fechaActualizacion ?? ""; this.data = { ...this.data, ...value }; this.changeDetector.detectChanges(); }, error: () => { this.error = "No se pudieron cargar los datos vitales."; this.changeDetector.detectChanges(); } });
   }
   fallbackAvatar(name: string): string { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00C9A7&color=fff&bold=true`; }
   selectPhoto(event: Event): void { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { this.avatarUrl = String(reader.result); this.api.update("/Sentinel/Users", this.userId, { fotoUrl: this.avatarUrl }).subscribe({ error: () => this.error = "La fotografía se mostró localmente, pero no pudo guardarse." }); }; reader.readAsDataURL(file); }
   save(): void {
     this.loading = true; this.message = ""; this.error = "";
     const request = this.recordExists ? this.api.update("/Sentinel/VitalData", this.userId, { idUser: this.userId, ...this.data }) : this.api.create("/Sentinel/VitalData", { idUser: this.userId, ...this.data });
-    request.subscribe({ next: () => { this.recordExists = true; this.updatedAt = new Date().toISOString(); this.loading = false; this.message = "Información vital actualizada correctamente."; }, error: (error) => { this.loading = false; this.error = error.error?.error ?? "No se pudo guardar la información vital."; } });
+    request.subscribe({ next: () => { this.recordExists = true; this.updatedAt = new Date().toISOString(); this.loading = false; this.message = "Información vital actualizada correctamente."; this.changeDetector.detectChanges(); }, error: (error) => { this.loading = false; this.error = error.error?.error ?? "No se pudo guardar la información vital."; this.changeDetector.detectChanges(); } });
   }
   logout(): void { this.auth.logout(); void this.router.navigateByUrl("/login"); }
 }
