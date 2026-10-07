@@ -65,16 +65,16 @@ interface ChatMessage { text: string; user: boolean; time: string; }
     .wellness-header-inner{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center}
     .wellness-brand{display:flex;align-items:center;gap:12px;color:#243047;text-decoration:none}
     .wellness-brand>span{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#23c7a4;color:#fff;font-size:27px;box-shadow:0 8px 18px #b9eee2}
-    .wellness-brand small,.assistant-heading span,.modal-kicker{display:block;color:#0c9d80;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .wellness-brand small,.assistant-heading span,.modal-kicker{display:block;color:#047857;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
     .wellness-brand b{display:block;margin-top:3px;font-size:14px;text-transform:uppercase}
     .wellness-user{text-align:right;display:flex;align-items:center;gap:18px}
     .wellness-user b,.wellness-user small{display:block}
     .wellness-user b{font-size:11px}
-    .wellness-user small{margin-top:4px;color:#94a3b8;font-size:9px;text-transform:uppercase}
+    .wellness-user small{margin-top:4px;color:#64748b;font-size:9px;text-transform:uppercase}
     .wellness-user i{color:#22c55e;font-style:normal}
     .wellness-user button{border:0;background:#f1f5f9;color:#64748b;border-radius:10px;padding:10px 13px;font-size:10px;font-weight:900;text-transform:uppercase}
     .wellness-shell{max-width:1180px;margin:34px auto;padding:0 24px 60px}
-    .wellness-hero{position:relative;overflow:hidden;min-height:190px;padding:35px 42px;border-radius:30px;background:linear-gradient(115deg,#0f766e,#00c9a7);color:#fff;box-shadow:0 18px 35px #00c9a72e}
+    .wellness-hero{position:relative;overflow:hidden;min-height:190px;padding:35px 42px;border-radius:30px;background:linear-gradient(115deg,#115e59,#0f766e);color:#fff;box-shadow:0 18px 35px #0f766e40}
     .wellness-hero>div:first-child{max-width:620px}
     .wellness-hero span{font-size:10px;font-weight:900;letter-spacing:.2em}
     .wellness-hero h1{margin:12px 0 8px;font-size:34px;letter-spacing:-.06em}
@@ -91,13 +91,13 @@ interface ChatMessage { text: string; user: boolean; time: string; }
     .quick-card div{flex:1}
     .quick-card b{display:block;font-size:14px;color:#0f172a;margin-bottom:4px}
     .quick-card small{color:#64748b;font-size:12px}
-    .quick-card strong{color:#0c9d80;font-size:18px}
+    .quick-card strong{color:#047857;font-size:18px}
     .wellness-content{display:grid;grid-template-columns:1fr 420px;gap:32px;margin-top:32px}
     .support-column{display:flex;flex-direction:column;gap:20px}
     .quote-card{padding:24px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:16px;position:relative}
     .quote-card span{position:absolute;top:8px;left:16px;font-size:28px;color:#14b8a6;line-height:1}
     .quote-card p{margin:0 0 12px;padding-left:40px;font-size:15px;color:#0f172a;line-height:1.6}
-    .quote-card small{display:block;padding-left:40px;color:#0c9d80;font-size:12px;font-style:italic}
+    .quote-card small{display:block;padding-left:40px;color:#047857;font-size:12px;font-style:italic}
     .resource-card{display:flex;gap:16px;padding:20px;background:#fff;border:1px solid #e2e8f0;border-radius:16px}
     .resource-card .resource-icon{font-size:24px}
     .resource-card b{display:block;font-size:14px;color:#0f172a;margin-bottom:4px}
@@ -105,7 +105,7 @@ interface ChatMessage { text: string; user: boolean; time: string; }
     .assistant-card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;padding:24px}
     .assistant-heading{display:flex;align-items:center;gap:16px;margin-bottom:20px}
     .assistant-avatar{font-size:28px}
-    .assistant-heading span{display:block;color:#0c9d80;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
+    .assistant-heading span{display:block;color:#047857;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase}
     .assistant-heading h2{margin:0;font-size:18px;color:#0f172a}
     .assistant-heading small{display:block;margin-top:4px;color:#64748b;font-size:12px}
     .assistant-heading i{color:#22c55e;font-size:10px}
@@ -113,39 +113,39 @@ interface ChatMessage { text: string; user: boolean; time: string; }
     .chat-line{display:flex;flex-direction:column;max-width:85%}
     .chat-line.from-user{align-self:flex-end}
     .chat-bubble{padding:12px 16px;border-radius:18px;font-size:14px;line-height:1.5}
-    .chat-line.from-user .chat-bubble{background:#0c9d80;color:#fff;border-bottom-right-radius:4px}
+    .chat-line.from-user .chat-bubble{background:#0f766e;color:#fff;border-bottom-right-radius:4px}
     .chat-line:not(.from-user) .chat-bubble{background:#fff;border:1px solid #e2e8f0;color:#0f172a;border-bottom-left-radius:4px}
-    .chat-line small{font-size:10px;color:#94a3b8;margin-top:4px;text-align:right}
+    .chat-line small{font-size:10px;color:#64748b;margin-top:4px;text-align:right}
     .chat-line.from-user small{text-align:left}
     .typing{display:flex;gap:4px;padding:8px 12px;color:#64748b;font-size:12px}
-    .typing i{width:6px;height:6px;background:#0c9d80;border-radius:50%;animation:bounce 1.4s infinite ease-in-out}
+    .typing i{width:6px;height:6px;background:#047857;border-radius:50%;animation:bounce 1.4s infinite ease-in-out}
     .typing i:nth-child(2){animation-delay:.2s}
     .typing i:nth-child(3){animation-delay:.4s}
     @keyframes bounce{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
     .suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
     .suggestions button{padding:8px 16px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;font-size:12px;color:#334155;cursor:pointer;transition:all .2s}
-    .suggestions button:hover{background:#0c9d80;color:#fff;border-color:#0c9d80}
+    .suggestions button:hover{background:#0f766e;color:#fff;border-color:#0f766e}
     .chat-form{display:flex;gap:12px}
     .chat-form textarea{flex:1;padding:12px 16px;border:1px solid #e2e8f0;border-radius:12px;font-family:inherit;font-size:14px;resize:none;min-height:56px;max-height:120px}
-    .chat-form textarea:focus{outline:none;border-color:#0c9d80;box-shadow:0 0 0 3px #14b8a633}
-    .chat-form button{padding:0 24px;background:#0c9d80;color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:background .2s}
+    .chat-form textarea:focus{outline:none;border-color:#047857;box-shadow:0 0 0 3px #14b8a633}
+    .chat-form button{padding:0 24px;background:#0f766e;color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;transition:background .2s}
     .chat-form button:disabled{background:#94a3b8;cursor:not-allowed}
-    .chat-disclaimer{display:block;text-align:center;margin-top:12px;font-size:11px;color:#94a3b8}
+    .chat-disclaimer{display:block;text-align:center;margin-top:12px;font-size:11px;color:#64748b}
     .error{color:#dc2626;font-size:12px;margin-top:8px}
     .modal-backdrop{position:fixed;inset:0;background:#00000080;display:flex;align-items:center;justify-content:center;z-index:50;padding:24px}
     .wellness-modal{background:#fff;border-radius:24px;padding:32px;max-width:420px;width:100%;box-shadow:0 24px 48px #00000020;position:relative}
     .wellness-modal .close{position:absolute;top:16px;right:16px;width:32px;height:32px;border:none;background:#f1f5f9;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
     .modal-symbol{font-size:40px;text-align:center;margin-bottom:8px}
-    .modal-kicker{display:block;color:#0c9d80;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;text-align:center;margin-bottom:8px}
+    .modal-kicker{display:block;color:#047857;font-size:9px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;text-align:center;margin-bottom:8px}
     .wellness-modal h2{margin:0 0 12px;font-size:22px;text-align:center;color:#0f172a}
     .wellness-modal p{margin:0 0 20px;color:#64748b;text-align:center;line-height:1.6}
     .wellness-modal ol{padding-left:20px;margin:0 0 20px;color:#334155;line-height:2}
     .wellness-modal li{margin-bottom:8px}
-    .wellness-modal li b{color:#0c9d80}
+    .wellness-modal li b{color:#047857}
     .crisis-box{background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:16px;margin:16px 0}
     .crisis-box b{display:block;margin-bottom:8px;color:#991b1b}
     .crisis-box span{display:block;margin-bottom:4px;color:#7f1d1d;font-size:13px}
-    .modal-action{width:100%;padding:14px;background:#0c9d80;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s}
+    .modal-action{width:100%;padding:14px;background:#0f766e;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;transition:background .2s}
     .modal-action:hover{background:#0f766e}
   `]
 })

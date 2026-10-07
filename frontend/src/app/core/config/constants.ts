@@ -1,3 +1,9 @@
+export const CATALOGO_PRIORIDADES = [
+  { value: "BAJA", label: "Baja" },
+  { value: "MEDIA", label: "Media" },
+  { value: "ALTA", label: "Alta" },
+] as const;
+
 export const PRIORIDADES = [
   { value: "BAJA", label: "Baja" },
   { value: "MEDIA", label: "Media" },

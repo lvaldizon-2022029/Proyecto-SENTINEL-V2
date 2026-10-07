@@ -59,3 +59,83 @@ export const DB_CONFIG = {
   defaultDatabase: process.env.DB_NAME ?? "sentinel_db_in5bm",
   defaultUser: process.env.DB_USERNAME ?? "IN5BM",
 } as const;
+
+export const CRUD_VALIDATION = {
+  usuarios: {
+    required: ["nombreUsers", "emailUsers", "rolUsers", "pinemergenciaUsers"],
+    fields: {
+      nombreUsers: { type: "string", minLength: 2, maxLength: 100 },
+      emailUsers: { type: "email", maxLength: 100 },
+      rolUsers: { type: "enum", values: ["USER", "STAFF", "ADMIN"] },
+      pinemergenciaUsers: { type: "string", minLength: 4, maxLength: 12, pattern: "^\\d+$" },
+    },
+  },
+  especialistas: {
+    required: ["userid", "especialidad", "biografia"],
+    fields: {
+      userid: { type: "number", integer: true, positive: true },
+      especialidad: { type: "string", minLength: 2, maxLength: 100 },
+      biografia: { type: "string", maxLength: 2000 },
+    },
+  },
+  despachos: {
+    required: ["alertaId", "estacionId", "unidad"],
+    fields: {
+      alertaId: { type: "number", integer: true, positive: true },
+      estacionId: { type: "number", integer: true, positive: true },
+      unidad: { type: "string", minLength: 1, maxLength: 50 },
+    },
+  },
+  agendaCharlas: {
+    required: ["ciudadanoId", "especialistaId", "fecha", "estado"],
+    fields: {
+      ciudadanoId: { type: "number", integer: true, positive: true },
+      especialistaId: { type: "number", integer: true, positive: true },
+      fecha: { type: "datetime" },
+      estado: { type: "enum", values: ["PENDIENTE", "CONFIRMADA", "CANCELADA"] },
+    },
+  },
+  catalogoEmergencias: {
+    required: ["nombre", "prioridad"],
+    fields: {
+      nombre: { type: "string", minLength: 2, maxLength: 100 },
+      prioridad: { type: "enum", values: ["BAJA", "MEDIA", "ALTA"] },
+    },
+  },
+  catalogoEntidades: {
+    required: ["nombre"],
+    fields: {
+      nombre: { type: "string", minLength: 2, maxLength: 100 },
+    },
+  },
+  estaciones: {
+    required: ["nombre", "entidadId", "latitud", "longitud", "direccion", "telefono"],
+    fields: {
+      nombre: { type: "string", minLength: 2, maxLength: 100 },
+      entidadId: { type: "number", integer: true, positive: true },
+      latitud: { type: "number", min: -90, max: 90 },
+      longitud: { type: "number", min: -180, max: 180 },
+      direccion: { type: "string", minLength: 5, maxLength: 200 },
+      telefono: { type: "string", minLength: 7, maxLength: 20, pattern: "^[\\d\\-\\s\\+]+$" },
+    },
+  },
+  staffAutoridad: {
+    required: ["estacionId", "rango", "estatus", "userId"],
+    fields: {
+      estacionId: { type: "number", integer: true, positive: true },
+      rango: { type: "string", minLength: 2, maxLength: 50 },
+      estatus: { type: "enum", values: ["ACTIVO", "INACTIVO", "LICENCIA", "SUSPENDIDO"] },
+      userId: { type: "number", integer: true, positive: true },
+    },
+  },
+  vitalData: {
+    required: ["idUser", "grupoSanguineo", "alergias", "enfermedadesCronicas", "contactoEmergencia"],
+    fields: {
+      idUser: { type: "number", integer: true, positive: true },
+      grupoSanguineo: { type: "enum", values: ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] },
+      alergias: { type: "string", maxLength: 500 },
+      enfermedadesCronicas: { type: "string", maxLength: 500 },
+      contactoEmergencia: { type: "string", minLength: 5, maxLength: 100 },
+    },
+  },
+} as const;

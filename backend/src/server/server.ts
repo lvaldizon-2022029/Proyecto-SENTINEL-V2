@@ -74,6 +74,13 @@ app.use(cors({
   }
 }));
 app.use(express.json({ limit: "1mb" }));
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const started = Date.now();
+  res.on("finish", () => {
+    console.log(`${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - started}ms`);
+  });
+  next();
+});
 app.get("/health", async (_req, res) => {
   let dbStatus = "unknown";
   try {
@@ -118,7 +125,19 @@ app.use("/Sentinel/VitalData", vitalDataRouter);
 app.use("/Sentinel", operationsRouter);
 app.use("/Sentinel/Diario", diarioRouter);
 app.use("/Sentinel/AI", aiLimiter, aiRouter);
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: "Recurso no encontrado" });
+});
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (error instanceof SyntaxError) {
+    return res.status(400).json({ error: "Cuerpo JSON inválido" });
+  }
+  if (error instanceof Error && (error as NodeJS.ErrnoException & { type?: string }).type === "entity.too.large") {
+    return res.status(413).json({ error: "Cuerpo demasiado grande" });
+  }
+  if (error instanceof Error && error.message === "Origen no permitido por CORS") {
+    return res.status(403).json({ error: "Origen no permitido por CORS" });
+  }
   console.error(error);
   res.status(500).json({ error: "Error interno del servidor" });
 });

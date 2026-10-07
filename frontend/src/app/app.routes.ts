@@ -9,6 +9,7 @@ import { BienestarComponent } from "./pages/ai/bienestar.component";
 import { RespiracionComponent } from "./pages/ai/respiracion.component";
 import { DiarioComponent } from "./pages/diario/diario.component";
 import { PerfilVitalComponent } from "./pages/perfil/perfil-vital.component";
+import { NotFoundComponent } from "./pages/not-found/not-found.component";
 
 export const routes: Routes = [
   { path: "login", component: LoginComponent },
@@ -32,5 +33,6 @@ export const routes: Routes = [
   { path: "diario", component: DiarioComponent, canActivate: [authGuard] },
   { path: "bienestar", component: BienestarComponent, canActivate: [authGuard] },
   { path: "respiracion", component: RespiracionComponent, canActivate: [authGuard] },
-  { path: "**", redirectTo: "" }
+  { path: "not-found", component: NotFoundComponent },
+  { path: "**", component: NotFoundComponent }
 ];

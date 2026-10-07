@@ -2,7 +2,9 @@ import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response, Router } from "express";
 import { store } from "../services/store";
 import { AuthenticatedRequest, Role } from "../models/types";
-import { JWT_CONFIG, ALERT_ESTADOS } from "../config/constants";
+import { JWT_CONFIG } from "../config/constants";
+import { crudSchemas, alertTriggerSchema, alertDisableSchema, aiQuerySchema, diaryEntrySchema, vitalDataSchema } from "../validation/schemas";
+import { validateWith, validateQueryWith, paginationQuerySchema } from "../validation/validate";
 
 const jwtSecret = process.env.JWT_SECRET;
 if (!jwtSecret) throw new Error("JWT_SECRET no configurado. Defínelo en backend/.env");
@@ -47,54 +49,23 @@ export const validateBody = (requiredFields: string[]) => (req: Request, res: Re
   next();
 };
 
-export const validateAlertTrigger = (req: Request, res: Response, next: NextFunction) => {
-  const { emergenciaId, latitud, longitud, ciudadanoId } = req.body;
-  if (emergenciaId === undefined || latitud === undefined || longitud === undefined || ciudadanoId === undefined) {
-    return res.status(400).json({ error: "Campos obligatorios: emergenciaId, latitud, longitud, ciudadanoId" });
-  }
-  if (typeof latitud !== "number" || typeof longitud !== "number") {
-    return res.status(400).json({ error: "Latitud y longitud deben ser números" });
-  }
-  if (latitud < -90 || latitud > 90 || longitud < -180 || longitud > 180) {
-    return res.status(400).json({ error: "Coordenadas fuera de rango válido" });
-  }
-  next();
+export const validateCrudBody = (collection: string) => {
+  const schema = crudSchemas[collection];
+  if (!schema) return (_req: Request, _res: Response, next: NextFunction) => next();
+  return validateWith(schema);
 };
 
-export const validateAlertDisable = (req: Request, res: Response, next: NextFunction) => {
-  const { idAlerta, pin } = req.body;
-  if (idAlerta === undefined || pin === undefined) {
-    return res.status(400).json({ error: "Campos obligatorios: idAlerta, pin" });
-  }
-  next();
-};
+export const validateAlertTrigger = validateWith(alertTriggerSchema);
 
-export const validateAiQuery = (req: Request, res: Response, next: NextFunction) => {
-  const { userId, prompt } = req.body;
-  if (!userId || !prompt || typeof prompt !== "string" || !prompt.trim()) {
-    return res.status(400).json({ error: "Campos obligatorios: userId (number), prompt (string no vacío)" });
-  }
-  next();
-};
+export const validateAlertDisable = validateWith(alertDisableSchema);
 
-export const validateDiaryEntry = (req: Request, res: Response, next: NextFunction) => {
-  const { titulo, contenido, userId } = req.body;
-  if (!titulo || !contenido || !userId) {
-    return res.status(400).json({ error: "Campos obligatorios: titulo, contenido, userId" });
-  }
-  if (typeof titulo !== "string" || typeof contenido !== "string") {
-    return res.status(400).json({ error: "Título y contenido deben ser strings" });
-  }
-  if (titulo.length > 200) return res.status(400).json({ error: "Título máximo 200 caracteres" });
-  if (contenido.length > 5000) return res.status(400).json({ error: "Contenido máximo 5000 caracteres" });
-  next();
-};
+export const validateAiQuery = validateWith(aiQuerySchema);
 
-export const validateVitalData = (req: Request, res: Response, next: NextFunction) => {
-  const { idUser, grupoSanguineo, alergias, enfermedadesCronicas, contactoEmergencia } = req.body;
-  if (!idUser) return res.status(400).json({ error: "idUser obligatorio" });
-  next();
-};
+export const validateDiaryEntry = validateWith(diaryEntrySchema);
+
+export const validateVitalData = validateWith(vitalDataSchema);
+
+export const validatePaginationQuery = validateQueryWith(paginationQuerySchema);
 
 export const crudRouter = (path: string, collection: string, readRoles: Role[] = ["ADMIN"], writeRoles: Role[] = readRoles) => {
   const router = Router();
@@ -112,9 +83,9 @@ export const crudRouter = (path: string, collection: string, readRoles: Role[] =
     const item = await store.findById(collection, Number(id));
     return item ? res.json(item) : res.status(404).json({ error: "Recurso no encontrado" });
   });
-  router.post("/", authenticate, requireRole(...writeRoles), async (req, res) =>
+  router.post("/", authenticate, requireRole(...writeRoles), validateCrudBody(collection), async (req, res) =>
     res.status(201).json({ datos: await store.create(collection, req.body), mensaje: "Recurso creado correctamente" }));
-  router.put("/:id", authenticate, requireRole(...writeRoles), async (req, res) => {
+  router.put("/:id", authenticate, requireRole(...writeRoles), validateCrudBody(collection), async (req, res) => {
     const item = await store.update(collection, Number(req.params.id), req.body);
     return item ? res.json({ datos: item, mensaje: "Recurso actualizado correctamente" }) : res.status(404).json({ error: "Recurso no encontrado" });
   });
