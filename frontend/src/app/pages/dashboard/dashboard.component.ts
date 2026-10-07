@@ -6,6 +6,7 @@ import * as L from "leaflet";
 import { Subscription, interval } from "rxjs";
 import { ApiService, Emergency } from "../../core/services/api.service";
 import { AuthService } from "../../core/services/auth.service";
+import { MODULES_CONFIG, AI_SUGGESTIONS, PANIC_CATEGORY_NAME, MAP_DEFAULTS, LEAFLET_ICONS } from "../../core/config/constants";
 
 interface AlertItem {
   idAlertas?: number;
@@ -17,6 +18,8 @@ interface AlertItem {
   ciudadanoId?: number;
   usuario?: { idUsers?: number; id?: number };
 }
+
+type ModuleConfig = typeof MODULES_CONFIG[number];
 
 @Component({
   standalone: true,
@@ -64,7 +67,12 @@ interface AlertItem {
             <div><small>Alerta #{{ alert.idAlertas || alert.id }}</small><b>{{ alertDate(alert) }}</b></div>
             <div class="alert-actions"><span [class.active]="alertStatus(alert) === 'ACTIVA'">{{ alertStatus(alert) }}</span>
               <button *ngIf="isEditable(alert)" (click)="selectAlert(alert.idAlertas || alert.id!)">{{ selectedAlertId === (alert.idAlertas || alert.id) ? "✕ CANCELAR" : "DESACTIVAR" }}</button></div>
-            <div *ngIf="selectedAlertId === (alert.idAlertas || alert.id)" class="pin-box"><input [id]="'pin-' + (alert.idAlertas || alert.id)" type="password" [(ngModel)]="pin" placeholder="PIN"><button (click)="disableAlert(alert.idAlertas || alert.id!)">OK</button></div>
+            <div *ngIf="selectedAlertId === (alert.idAlertas || alert.id)" class="pin-box">
+              <form #pinForm="ngForm" (ngSubmit)="disableAlert(alert.idAlertas || alert.id!)">
+                <input [id]="'pin-' + (alert.idAlertas || alert.id)" type="password" name="pin" [(ngModel)]="pin" placeholder="PIN" required minlength="4" maxlength="12" #pinInput="ngModel">
+                <button type="submit" [disabled]="pinForm.invalid">OK</button>
+              </form>
+            </div>
           </article>
         </div>
         <div *ngIf="status" class="status" [class.error]="statusError">{{ status }}</div>
@@ -84,7 +92,10 @@ interface AlertItem {
       <div class="chat-messages"><div class="bot-message">Unidad de IA SENTINEL lista. ¿Necesitas asesoría en primeros auxilios?</div>
         <div *ngFor="let message of messages" [class.user-message]="message.user" [class.bot-message]="!message.user">{{ message.text }}</div>
       </div>
-      <form (ngSubmit)="askAi()"><input name="prompt" [(ngModel)]="prompt" placeholder="Pregunta sobre síntomas o auxilio..."><button>➤</button></form>
+      <form #aiForm="ngForm" (ngSubmit)="askAi()">
+        <input name="prompt" [(ngModel)]="prompt" placeholder="Pregunta sobre síntomas o auxilio..." required #promptInput="ngModel">
+        <button type="submit" [disabled]="aiForm.invalid || loading">➤</button>
+      </form>
     </div>
 
     <div *ngIf="modalOpen" class="modal-backdrop"><div class="modal">
@@ -109,23 +120,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   displayName = "USUARIO"; avatarUrl = "";
   catalog: Emergency[] = []; filteredCatalog: Emergency[] = []; userAlerts: AlertItem[] = [];
   search = ""; status = ""; statusError = false; modalOpen = false; chatOpen = false;
-  latitude = 14.6349; longitude = -90.5069; pendingEmergencyId?: number; pendingSilent = false;
-  selectedAlertId: number | null = null; pin = ""; prompt = ""; messages: { text: string; user: boolean }[] = [];
+  latitude = MAP_DEFAULTS.lat; longitude = MAP_DEFAULTS.lng; pendingEmergencyId?: number; pendingSilent = false;
+  selectedAlertId: number | null = null; pin = ""; prompt = ""; messages: { text: string; user: boolean }[] = []; loading = false;
   private map?: L.Map; private marker?: L.Marker;
 
-  readonly modules = [
-    { role: "USER", kicker: "Espacio seguro", title: "Bienestar<br>Psicológico", subtitle: "SALUD MENTAL Y APOYO EMOCIONAL", icon: "💚", route: "/bienestar", theme: "teal" },
-    { role: "ADMIN", kicker: "Ficha clínica", title: "Acceso<br>Médico", subtitle: "DATOS VITALES", icon: "🏥", route: "/vital-data", theme: "red" },
-    { role: "ADMIN", kicker: "Seguridad", title: "Gestión de<br>Accesos", subtitle: "GESTIÓN USUARIOS", icon: "⚙️", route: "/admin-users", theme: "teal" },
-    { role: "ADMIN", kicker: "Directorio", title: "Catálogo de<br>Entidades", subtitle: "CATÁLOGO ENTIDADES", icon: "📘", route: "/catalogo-entidades", theme: "blue" },
-    { role: "STAFF", kicker: "Seguridad", title: "Catálogo de<br>Emergencias", subtitle: "PROTOCOLOS DE RESPUESTA", icon: "🚨", route: "/catalogo-emergencias", theme: "red" },
-    { role: "STAFF", kicker: "Logística", title: "Gestión de<br>Despachos", subtitle: "CONTROL OPERATIVO", icon: "📡", route: "/despachos", theme: "slate" },
-    { role: "STAFF", kicker: "Personal", title: "Staff de<br>Autoridad", subtitle: "EQUIPO DE COORDINACIÓN", icon: "👤", route: "/staff", theme: "indigo" },
-    { role: "ADMIN", kicker: "Especialidades", title: "Cuerpo Médico<br>Técnico", subtitle: "ESPECIALISTAS", icon: "🩺", route: "/admin-especialistas", theme: "indigo" },
-    { role: "ADMIN", kicker: "Infraestructura", title: "Estaciones de<br>Control", subtitle: "CENTROS DE OPERACIONES", icon: "🏢", route: "/estaciones", theme: "orange" },
-    { role: "STAFF", kicker: "Incidentes", title: "Gestión de<br>Alertas", subtitle: "MONITOREO EN TIEMPO REAL", icon: "⚠️", route: "/alertas", theme: "amber" },
-    { role: "STAFF", kicker: "Capacitaciones", title: "Agendar<br>Charlas", subtitle: "SESIONES INFORMATIVAS", icon: "📅", route: "/agenda", theme: "slate" }
-  ];
+  readonly modules = MODULES_CONFIG;
+  readonly aiSuggestions = AI_SUGGESTIONS.medical;
 
   get visibleModules() { const role = this.auth.session()?.rolUsers ?? "USER"; return this.modules.filter((module) => module.role === "USER" || module.role === role || (role === "ADMIN" && module.role === "STAFF")); }
 
@@ -143,18 +143,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   filterCatalog(): void { const value = this.search.toLowerCase(); this.filteredCatalog = this.catalog.filter((item) => String(item.nombreCatalogoEmergencias ?? "").toLowerCase().includes(value)); }
   loadAlerts(): void { this.api.getAlerts().subscribe({ next: (value) => { const items = Array.isArray(value) ? value : value.data; const userId = this.auth.session()?.idUsers; this.userAlerts = (items as AlertItem[]).filter((item) => Number(item.ciudadanoId ?? item.usuario?.idUsers ?? item.usuario?.id) === userId); this.changeDetector.detectChanges(); }, error: () => { this.userAlerts = []; this.changeDetector.detectChanges(); } }); }
   openAlert(id?: number, silent = false): void { if (!id) return; if (this.userAlerts.some((item) => this.isEditable(item))) { this.showStatus("Existe una alerta activa en resolución", true); return; } this.pendingEmergencyId = id; this.pendingSilent = silent; this.modalOpen = true; this.getLocation(); }
-  sendSilentAlert(): void { const panic = this.catalog.find((item) => String(item.nombreCatalogoEmergencias ?? "").toUpperCase().includes("PÁNICO")); if (!panic?.idCatalogoEmergencias) { this.showStatus("No se encontró la categoría PÁNICO", true); return; } this.openAlert(panic.idCatalogoEmergencias, true); }
+  sendSilentAlert(): void { const panic = this.catalog.find((item) => String(item.nombreCatalogoEmergencias ?? "").toUpperCase().includes(PANIC_CATEGORY_NAME)); if (!panic?.idCatalogoEmergencias) { this.showStatus("No se encontró la categoría PÁNICO", true); return; } this.openAlert(panic.idCatalogoEmergencias, true); }
   getLocation(): void { if (!navigator.geolocation) { this.initMap(); return; } navigator.geolocation.getCurrentPosition((position) => { this.latitude = position.coords.latitude; this.longitude = position.coords.longitude; this.initMap(); this.showStatus("GPS integrado"); }, () => this.initMap()); }
-  initMap(): void { setTimeout(() => { if (!this.map) { L.Icon.Default.mergeOptions({ iconUrl: "/assets/leaflet/marker-icon.png", iconRetinaUrl: "/assets/leaflet/marker-icon-2x.png", shadowUrl: "/assets/leaflet/marker-shadow.png" }); this.map = L.map("dashboard-map").setView([this.latitude, this.longitude], 16); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(this.map); this.marker = L.marker([this.latitude, this.longitude], { draggable: true }).addTo(this.map); this.marker.on("dragend", () => this.readMarker()); this.map.on("click", (event) => { this.marker?.setLatLng(event.latlng); this.readMarker(); }); } else { this.map.setView([this.latitude, this.longitude], 16); this.marker?.setLatLng([this.latitude, this.longitude]); } this.map.invalidateSize(); }, 0); }
+  initMap(): void { setTimeout(() => { if (!this.map) { L.Icon.Default.mergeOptions(LEAFLET_ICONS); this.map = L.map("dashboard-map").setView([this.latitude, this.longitude], MAP_DEFAULTS.zoom); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(this.map); this.marker = L.marker([this.latitude, this.longitude], { draggable: true }).addTo(this.map); this.marker.on("dragend", () => this.readMarker()); this.map.on("click", (event) => { this.marker?.setLatLng(event.latlng); this.readMarker(); }); } else { this.map.setView([this.latitude, this.longitude], MAP_DEFAULTS.zoom); this.marker?.setLatLng([this.latitude, this.longitude]); } this.map.invalidateSize(); }, 0); }
   readMarker(): void { const position = this.marker?.getLatLng(); if (position) { this.latitude = position.lat; this.longitude = position.lng; } }
   closeModal(): void { this.modalOpen = false; }
   confirmAlert(): void { if (!this.pendingEmergencyId) return; this.api.triggerAlert({ latitud: this.latitude, longitud: this.longitude, esSilenciosa: this.pendingSilent, ciudadanoId: this.auth.session()?.idUsers, emergenciaId: this.pendingEmergencyId, infoExtra: "DISPOSITIVO WEB - SENTINEL DASHBOARD GPS" }).subscribe({ next: () => { this.closeModal(); this.showStatus(this.pendingSilent ? "Pánico silencioso enviado" : "Alerta registrada"); this.loadAlerts(); }, error: () => this.showStatus("Error en servidor", true) }); }
   selectAlert(id: number): void { this.selectedAlertId = this.selectedAlertId === id ? null : id; this.pin = ""; }
-  disableAlert(id: number): void { if (!this.pin.trim()) return; this.api.disableAlert(id, this.pin.trim()).subscribe({ next: () => { this.selectedAlertId = null; this.pin = ""; this.showStatus("Canal normalizado"); this.loadAlerts(); }, error: () => { this.pin = ""; this.showStatus("PIN incorrecto", true); } }); }
+  disableAlert(id: number): void { if (!this.pin || this.pin.length < 4) return; this.api.disableAlert(id, this.pin.trim()).subscribe({ next: () => { this.selectedAlertId = null; this.pin = ""; this.showStatus("Canal normalizado"); this.loadAlerts(); }, error: () => { this.pin = ""; this.showStatus("PIN incorrecto", true); } }); }
   isEditable(alert: AlertItem): boolean { return ["PENDIENTE", "ACTIVA"].includes(this.alertStatus(alert)); }
   alertStatus(alert: AlertItem): string { return String(alert.estadoAlertas ?? alert.estado ?? "PENDIENTE").toUpperCase(); }
   alertDate(alert: AlertItem): string { const date = alert.fechaAlertas ?? alert.fecha; return date ? new Date(date).toLocaleTimeString() : "---"; }
-  askAi(): void { const text = this.prompt.trim(); if (!text) return; this.messages.push({ text, user: true }); this.prompt = ""; this.messages.push({ text: "Analizando protocolo médico...", user: false }); this.api.askAi("medical", this.auth.session()?.idUsers ?? 0, text).subscribe({ next: (answer) => this.messages[this.messages.length - 1].text = answer.respuesta, error: () => this.messages[this.messages.length - 1].text = "⚠️ El proveedor de IA no está disponible." }); }
+  askAi(): void { const text = this.prompt.trim(); if (!text || this.loading) return; this.messages.push({ text, user: true }); this.prompt = ""; this.loading = true; this.messages.push({ text: "Analizando protocolo médico...", user: false }); this.api.askAi("medical", this.auth.session()?.idUsers ?? 0, text).subscribe({ next: (answer) => { this.messages[this.messages.length - 1].text = answer.respuesta; this.loading = false; this.changeDetector.detectChanges(); }, error: () => { this.messages[this.messages.length - 1].text = "⚠️ El proveedor de IA no está disponible."; this.loading = false; this.changeDetector.detectChanges(); } }); }
   showStatus(message: string, error = false): void { this.status = message; this.statusError = error; setTimeout(() => this.status = "", 4000); }
   go(route: string): void { void this.router.navigateByUrl(route); }
   logout(): void { this.auth.logout(); void this.router.navigateByUrl("/login"); }

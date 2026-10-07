@@ -1,6 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component, OnDestroy } from "@angular/core";
 import { RouterLink } from "@angular/router";
+import { BREATHING_PHASES } from "../../core/config/constants";
 
 @Component({
   standalone: true,
@@ -10,7 +11,7 @@ import { RouterLink } from "@angular/router";
       <a routerLink="/bienestar" class="back-link">← Volver a bienestar</a>
       <section class="breathing-card">
         <span class="breathing-kicker">SENTINEL • CALMA</span><h1>Respiración consciente</h1><p class="intro">Sigue el círculo y permite que tu respiración encuentre un ritmo tranquilo.</p>
-        <div class="instruction-row"><span>4 s</span><b>Inhala</b><span>4 s</span><b>Mantén</b><span>6 s</span><b>Exhala</b></div>
+        <div class="instruction-row"><ng-container *ngFor="let ph of phases"><span>{{ ph.duration }} s</span><b>{{ ph.name }}</b></ng-container></div>
         <div class="breath-stage" [class.active]="running" [class.inhale]="phase === 'Inhala'" [class.hold]="phase === 'Mantén'" [class.exhale]="phase === 'Exhala'"><div class="breath-orbit"></div><div class="breath-core"><small>{{ running ? phase : "Cuando estés listo" }}</small><strong>{{ running ? seconds : "♡" }}</strong><span>{{ running ? "segundos" : "Respira" }}</span></div></div>
         <div class="breath-status" *ngIf="running">Ciclo {{ cycle }} · Sigue el ritmo sin forzar.</div>
         <div class="breathing-controls"><button class="start" *ngIf="!running" (click)="start()">Comenzar ejercicio</button><button class="stop" *ngIf="running" (click)="stop()">Detener ejercicio</button></div>
@@ -24,7 +25,7 @@ import { RouterLink } from "@angular/router";
 })
 export class RespiracionComponent implements OnDestroy {
   running = false; phase = "Listo"; seconds = 0; cycle = 1; private timer?: ReturnType<typeof setInterval>; private phaseIndex = 0;
-  private readonly phases = [{ name: "Inhala", duration: 4 }, { name: "Mantén", duration: 4 }, { name: "Exhala", duration: 6 }];
+  readonly phases = BREATHING_PHASES;
   start(): void { this.stop(); this.running = true; this.cycle = 1; this.phaseIndex = 0; this.seconds = this.phases[0].duration; this.phase = this.phases[0].name; this.timer = setInterval(() => this.tick(), 1000); }
   tick(): void { if (--this.seconds > 0) return; this.phaseIndex = (this.phaseIndex + 1) % this.phases.length; if (this.phaseIndex === 0) this.cycle++; const next = this.phases[this.phaseIndex]; this.phase = next.name; this.seconds = next.duration; }
   stop(): void { if (this.timer) clearInterval(this.timer); this.timer = undefined; this.running = false; this.phase = "Listo"; this.seconds = 0; }

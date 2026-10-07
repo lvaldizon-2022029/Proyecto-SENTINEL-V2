@@ -1,7 +1,7 @@
 import { Request, Router } from "express";
 import { store } from "../services/store";
 import { AuthenticatedRequest } from "../models/types";
-import { authenticate, crudRouter, requireRole } from "./middleware";
+import { authenticate, crudRouter, requireRole, validateVitalData } from "./middleware";
 
 export const vitalDataRouter = Router();
 const toVitalDataResponse = (item: Record<string, unknown>) => ({
@@ -27,3 +27,5 @@ vitalDataRouter.get("/:id", authenticate, requireRole("USER", "ADMIN"), async (r
   return res.json({ exists: false, id, idUser: id, grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "", telefonoEmergencia: "" });
 });
 vitalDataRouter.use(crudRouter("/Sentinel/VitalData", "vitalData", ["USER", "ADMIN"]));
+vitalDataRouter.post("/", authenticate, requireRole("USER", "ADMIN"), validateVitalData);
+vitalDataRouter.put("/:id", authenticate, requireRole("USER", "ADMIN"), validateVitalData);

@@ -1,6 +1,8 @@
 import "dotenv/config";
 import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
 import { aiRouter } from "../router/ai.router";
 import { alertasRouter, alertActionsRouter } from "../router/alertas.router";
 import { authRouter } from "../router/auth.router";
@@ -15,6 +17,39 @@ import { authenticate, requireRole } from "../router/middleware";
 import { AuthenticatedRequest } from "../models/types";
 
 const app = express();
+
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  contentSecurityPolicy: false,
+}));
+
+// Rate limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: "Demasiadas solicitudes, intente más tarde" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Demasiados intentos de autenticación, intente en 15 minutos" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  message: { error: "Límite de consultas a IA alcanzado, intente en 1 minuto" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(globalLimiter);
 const configuredOrigins = (process.env.FRONTEND_ORIGIN ?? "")
   .split(",")
   .map((origin) => origin.trim())
@@ -39,9 +74,22 @@ app.use(cors({
   }
 }));
 app.use(express.json({ limit: "1mb" }));
-app.get("/health", (_req, res) => res.json({ status: "ok", service: "sentinel-backend", persistence: store.persistence }));
-app.use("/Sentinel/Auth", authRouter);
-app.use("/Sentinel/auth", authRouter);
+app.get("/health", async (_req, res) => {
+  let dbStatus = "unknown";
+  try {
+    if (store.persistence === "mysql") {
+      await store.collection("users", "", 1, 1);
+      dbStatus = "connected";
+    } else {
+      dbStatus = "memory";
+    }
+  } catch {
+    dbStatus = "error";
+  }
+  res.json({ status: "ok", service: "sentinel-backend", persistence: store.persistence, database: dbStatus });
+});
+app.use("/Sentinel/Auth", authLimiter, authRouter);
+app.use("/Sentinel/auth", authLimiter, authRouter);
 app.use("/Sentinel/Users", usersRouter);
 app.use("/Sentinel/Dashboard", dashboardRouter);
 app.use("/Sentinel/Alertas", alertActionsRouter);
@@ -69,7 +117,7 @@ app.use("/Sentinel/agenda-charlas", agendaActionsRouter);
 app.use("/Sentinel/VitalData", vitalDataRouter);
 app.use("/Sentinel", operationsRouter);
 app.use("/Sentinel/Diario", diarioRouter);
-app.use("/Sentinel/AI", aiRouter);
+app.use("/Sentinel/AI", aiLimiter, aiRouter);
 app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(error);
   res.status(500).json({ error: "Error interno del servidor" });
