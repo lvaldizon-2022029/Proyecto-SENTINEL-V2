@@ -1,0 +1,1729 @@
+openapi: 3.0.3
+info:
+  title: SENTINEL API
+  version: 1.0.0
+  description: API de coordinación de alertas, bienestar y respuesta ante emergencias.
+servers:
+  - url: http://localhost:8082
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      summary: Estado del servicio
+      security: []
+      responses:
+        '200':
+          description: Servicio disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /Sentinel/Auth/register:
+    post:
+      summary: Registrar usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuario registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Auth/login:
+    post:
+      summary: Iniciar sesión y obtener JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /Sentinel/Users:
+    get:
+      summary: Listar usuarios
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Crear usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /Sentinel/Users/{id}:
+    get:
+      summary: Obtener usuario por id
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar usuario
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar usuario
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Dashboard/estadisticas:
+    get:
+      summary: Estadísticas del panel
+      responses:
+        '200':
+          description: Contadores principales
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+  /Sentinel/Alertas:
+    get:
+      summary: Listar alertas con búsqueda y paginación
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de alertas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alerta'
+    post:
+      summary: Crear alerta
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertTrigger'
+      responses:
+        '201':
+          description: Alerta creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Alertas/{id}:
+    get:
+      summary: Obtener alerta por id
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Alerta encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alerta'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar alerta
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Alerta actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar alerta
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Alerta eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Alertas/disparar:
+    post:
+      summary: Disparar alerta de emergencia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertTrigger'
+      responses:
+        '201':
+          description: Alerta procesada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertTriggerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Alertas/desactivar:
+    post:
+      summary: Desactivar alerta con PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertDisable'
+      responses:
+        '200':
+          description: Alerta desactivada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/CatalogoEmergencias:
+    get:
+      summary: Listar catálogo de emergencias
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista del catálogo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogoEmergencia'
+    post:
+      summary: Crear tipo de emergencia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogoEmergenciaInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/CatalogoEmergencias/{id}:
+    get:
+      summary: Obtener tipo de emergencia
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogoEmergencia'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar tipo de emergencia
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogoEmergenciaInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar tipo de emergencia
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/CatalogoEntidades:
+    get:
+      summary: Listar catálogo de entidades
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista del catálogo
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogoEntidad'
+    post:
+      summary: Crear entidad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogoEntidadInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/CatalogoEntidades/{id}:
+    get:
+      summary: Obtener entidad
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogoEntidad'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar entidad
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogoEntidadInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar entidad
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/entidades/buscarNombre:
+    get:
+      summary: Buscar entidad por nombre exacto
+      parameters:
+        - name: nombre
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Entidad encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogoEntidad'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/emergencias/prioridad/{prioridad}:
+    get:
+      summary: Filtrar emergencias por prioridad
+      parameters:
+        - name: prioridad
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [BAJA, MEDIA, ALTA]
+      responses:
+        '200':
+          description: Coincidencias encontradas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogoEmergencia'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/emergencias/total:
+    get:
+      summary: Total de categorías de emergencia
+      responses:
+        '200':
+          description: Total calculado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalCategorias:
+                    type: integer
+  /Sentinel/DespachosEmergencia:
+    get:
+      summary: Listar despachos
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de despachos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Despacho'
+    post:
+      summary: Despachar unidad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DespachoInput'
+      responses:
+        '201':
+          description: Unidad despachada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/DespachosEmergencia/{id}:
+    get:
+      summary: Obtener despacho
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Despacho'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar despacho
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DespachoInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar despacho
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Especialistas:
+    get:
+      summary: Listar especialistas
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de especialistas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Especialista'
+    post:
+      summary: Crear especialista
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EspecialistaInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Especialistas/{id}:
+    get:
+      summary: Obtener especialista
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Especialista'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar especialista
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EspecialistaInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar especialista
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Estaciones:
+    get:
+      summary: Listar estaciones
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de estaciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estacion'
+    post:
+      summary: Crear estación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstacionInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Estaciones/{id}:
+    get:
+      summary: Obtener estación
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Estacion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar estación
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstacionInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar estación
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/estaciones/buscar:
+    get:
+      summary: Buscar estaciones por nombre
+      parameters:
+        - name: nombre
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Coincidencias encontradas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estacion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/estaciones/{id}/ubicacion:
+    patch:
+      summary: Actualizar ubicación de estación
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [latitud, longitud]
+              properties:
+                latitud:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                longitud:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+      responses:
+        '200':
+          description: Ubicación actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/estaciones/check:
+    get:
+      summary: Verificar estado del controlador de estaciones
+      security: []
+      responses:
+        '200':
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                type: object
+  /Sentinel/estaciones/tipo/{tipoId}:
+    get:
+      summary: Filtrar estaciones por tipo de entidad
+      parameters:
+        - name: tipoId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista filtrada
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Estacion'
+  /Sentinel/estaciones/contar:
+    get:
+      summary: Contar estaciones
+      responses:
+        '200':
+          description: Total de estaciones
+          content:
+            application/json:
+              schema:
+                type: integer
+  /Sentinel/StaffAutoridad:
+    get:
+      summary: Listar personal de autoridad
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de personal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffAutoridad'
+    post:
+      summary: Crear registro de personal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffAutoridadInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/StaffAutoridad/{id}:
+    get:
+      summary: Obtener personal por id
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffAutoridad'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar personal
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffAutoridadInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar personal
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/staff/buscar/cargo:
+    get:
+      summary: Buscar personal por cargo
+      parameters:
+        - name: cargo
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Coincidencias encontradas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StaffAutoridad'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/staff/check:
+    get:
+      summary: Verificar estado del servicio de personal
+      security: []
+      responses:
+        '200':
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                type: object
+  /Sentinel/AgendaCharlas:
+    get:
+      summary: Listar charlas agendadas
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de charlas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgendaCharla'
+    post:
+      summary: Agendar charla
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgendaCharlaInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/AgendaCharlas/{id}:
+    get:
+      summary: Obtener charla
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgendaCharla'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar charla
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgendaCharlaInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar charla
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/AgendaCharlas/{id}/confirmar:
+    post:
+      summary: Confirmar asistencia a charla
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Asistencia confirmada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/VitalData:
+    get:
+      summary: Listar datos vitales
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Lista de registros
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VitalData'
+    post:
+      summary: Crear datos vitales
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VitalDataInput'
+      responses:
+        '201':
+          description: Recurso creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/VitalData/{id}:
+    get:
+      summary: Obtener datos vitales por usuario
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Registro encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VitalData'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      summary: Actualizar datos vitales
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VitalDataInput'
+      responses:
+        '200':
+          description: Recurso actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      summary: Eliminar datos vitales
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Recurso eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Diario/guardar:
+    post:
+      summary: Guardar entrada del diario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiarioInput'
+      responses:
+        '200':
+          description: Entrada guardada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /Sentinel/Diario/historial/{userId}:
+    get:
+      summary: Historial del diario por usuario
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Historial encontrado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Diario'
+  /Sentinel/Diario/actualizar/{id}:
+    put:
+      summary: Actualizar entrada del diario
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiarioInput'
+      responses:
+        '200':
+          description: Entrada actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/Diario/eliminar/{id}:
+    delete:
+      summary: Eliminar entrada del diario
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          description: Entrada eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /Sentinel/AI/consultar:
+    post:
+      summary: Consulta médica a IA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiQuery'
+      responses:
+        '200':
+          description: Respuesta generada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAnswer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: Proveedor de IA no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /Sentinel/AI/bienestar:
+    post:
+      summary: Consulta de bienestar a IA
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiQuery'
+      responses:
+        '200':
+          description: Respuesta generada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiAnswer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: Proveedor de IA no disponible
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+  responses:
+    BadRequest:
+      description: Solicitud inválida
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: No autorizado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Prohibido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: Límite de solicitudes excedido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        service:
+          type: string
+        persistence:
+          type: string
+        database:
+          type: string
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    SuccessEnvelope:
+      type: object
+      properties:
+        datos: {}
+        mensaje:
+          type: string
+        id:
+          type: integer
+    RegisterRequest:
+      type: object
+      required: [nombreUsers, emailUsers, contrasenaUsers]
+      properties:
+        nombreUsers:
+          type: string
+          minLength: 2
+          maxLength: 100
+        emailUsers:
+          type: string
+          format: email
+          maxLength: 100
+        contrasenaUsers:
+          type: string
+          format: password
+          minLength: 6
+          maxLength: 100
+        rolUsers:
+          type: string
+          enum: [USER, STAFF, ADMIN]
+          default: USER
+        pinemergenciaUsers:
+          type: string
+          pattern: '^[0-9]{4,12}$'
+    LoginRequest:
+      type: object
+      required: [emailUsers, contrasenaUsers]
+      properties:
+        emailUsers:
+          type: string
+          format: email
+        contrasenaUsers:
+          type: string
+          format: password
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        idUsers:
+          type: integer
+        nombreUsers:
+          type: string
+        emailUsers:
+          type: string
+        rolUsers:
+          type: string
+    User:
+      type: object
+      properties:
+        idUsers:
+          type: integer
+        nombreUsers:
+          type: string
+        emailUsers:
+          type: string
+        rolUsers:
+          type: string
+          enum: [USER, STAFF, ADMIN]
+        pinemergenciaUsers:
+          type: string
+        fechaCreacion:
+          type: string
+          format: date-time
+        fotoUrl:
+          type: string
+          nullable: true
+    UserCreate:
+      type: object
+      required: [nombreUsers, emailUsers, rolUsers, pinemergenciaUsers]
+      properties:
+        nombreUsers:
+          type: string
+          minLength: 2
+          maxLength: 100
+        emailUsers:
+          type: string
+          format: email
+        rolUsers:
+          type: string
+          enum: [USER, STAFF, ADMIN]
+        pinemergenciaUsers:
+          type: string
+          pattern: '^[0-9]{4,12}$'
+    DashboardStats:
+      type: object
+      properties:
+        usuarios:
+          type: integer
+        alertas:
+          type: integer
+        alertasPendientes:
+          type: integer
+        despachos:
+          type: integer
+    Alerta:
+      type: object
+      properties:
+        id:
+          type: integer
+        ciudadanoId:
+          type: integer
+        emergenciaId:
+          type: integer
+        latitud:
+          type: number
+        longitud:
+          type: number
+        estadoAlertas:
+          type: string
+    AlertTrigger:
+      type: object
+      required: [emergenciaId, latitud, longitud, ciudadanoId]
+      properties:
+        emergenciaId:
+          type: integer
+          minimum: 1
+        latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        ciudadanoId:
+          type: integer
+          minimum: 1
+        esSilenciosa:
+          type: integer
+          enum: [0, 1]
+    AlertTriggerResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        idAlerta:
+          type: integer
+    AlertDisable:
+      type: object
+      required: [idAlerta, pin]
+      properties:
+        idAlerta:
+          type: integer
+          minimum: 1
+        pin:
+          type: string
+    CatalogoEmergencia:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        prioridad:
+          type: string
+    CatalogoEmergenciaInput:
+      type: object
+      required: [nombre, prioridad]
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 100
+        prioridad:
+          type: string
+          enum: [BAJA, MEDIA, ALTA]
+    CatalogoEntidad:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+    CatalogoEntidadInput:
+      type: object
+      required: [nombre]
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 100
+    Despacho:
+      type: object
+      properties:
+        id:
+          type: integer
+        alertaId:
+          type: integer
+        estacionId:
+          type: integer
+        unidad:
+          type: string
+        fecha:
+          type: string
+    DespachoInput:
+      type: object
+      required: [alertaId, estacionId, unidad]
+      properties:
+        alertaId:
+          type: integer
+          minimum: 1
+        estacionId:
+          type: integer
+          minimum: 1
+        unidad:
+          type: string
+          minLength: 1
+          maxLength: 50
+    Especialista:
+      type: object
+      properties:
+        id:
+          type: integer
+        userid:
+          type: integer
+        especialidad:
+          type: string
+        biografia:
+          type: string
+    EspecialistaInput:
+      type: object
+      required: [userid, especialidad, biografia]
+      properties:
+        userid:
+          type: integer
+          minimum: 1
+        especialidad:
+          type: string
+          minLength: 2
+          maxLength: 100
+        biografia:
+          type: string
+          maxLength: 2000
+    Estacion:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        entidadId:
+          type: integer
+        latitud:
+          type: number
+        longitud:
+          type: number
+        direccion:
+          type: string
+        telefono:
+          type: string
+    EstacionInput:
+      type: object
+      required: [nombre, entidadId, latitud, longitud, direccion, telefono]
+      properties:
+        nombre:
+          type: string
+          minLength: 2
+          maxLength: 100
+        entidadId:
+          type: integer
+          minimum: 1
+        latitud:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitud:
+          type: number
+          minimum: -180
+          maximum: 180
+        direccion:
+          type: string
+          minLength: 5
+          maxLength: 200
+        telefono:
+          type: string
+          minLength: 7
+          maxLength: 20
+    StaffAutoridad:
+      type: object
+      properties:
+        id:
+          type: integer
+        estacionId:
+          type: integer
+        rango:
+          type: string
+        estatus:
+          type: string
+        userId:
+          type: integer
+    StaffAutoridadInput:
+      type: object
+      required: [estacionId, rango, estatus, userId]
+      properties:
+        estacionId:
+          type: integer
+          minimum: 1
+        rango:
+          type: string
+          minLength: 2
+          maxLength: 50
+        estatus:
+          type: string
+          enum: [ACTIVO, INACTIVO, LICENCIA, SUSPENDIDO]
+        userId:
+          type: integer
+          minimum: 1
+    AgendaCharla:
+      type: object
+      properties:
+        id:
+          type: integer
+        ciudadanoId:
+          type: integer
+        especialistaId:
+          type: integer
+        fecha:
+          type: string
+          format: date-time
+        estado:
+          type: string
+    AgendaCharlaInput:
+      type: object
+      required: [ciudadanoId, especialistaId, fecha, estado]
+      properties:
+        ciudadanoId:
+          type: integer
+          minimum: 1
+        especialistaId:
+          type: integer
+          minimum: 1
+        fecha:
+          type: string
+          format: date-time
+        estado:
+          type: string
+          enum: [PENDIENTE, CONFIRMADA, CANCELADA]
+    VitalData:
+      type: object
+      properties:
+        id:
+          type: integer
+        idUser:
+          type: integer
+        grupoSanguineo:
+          type: string
+        alergias:
+          type: string
+        enfermedadesCronicas:
+          type: string
+        contactoEmergencia:
+          type: string
+    VitalDataInput:
+      type: object
+      required: [idUser]
+      properties:
+        idUser:
+          type: integer
+          minimum: 1
+        grupoSanguineo:
+          type: string
+          enum: [O+, O-, A+, A-, B+, B-, AB+, AB-]
+        alergias:
+          type: string
+          maxLength: 500
+        enfermedadesCronicas:
+          type: string
+          maxLength: 500
+        contactoEmergencia:
+          type: string
+          minLength: 5
+          maxLength: 100
+    Diario:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        titulo:
+          type: string
+        contenido:
+          type: string
+        fechaRegistro:
+          type: string
+    DiarioInput:
+      type: object
+      required: [titulo, contenido, userId]
+      properties:
+        titulo:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contenido:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        userId:
+          type: integer
+          minimum: 1
+    AiQuery:
+      type: object
+      required: [userId, prompt]
+      properties:
+        userId:
+          type: integer
+          minimum: 1
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    AiAnswer:
+      type: object
+      properties:
+        respuesta:
+          type: string
