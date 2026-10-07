@@ -4,14 +4,8 @@ import { FormsModule } from "@angular/forms";
 import { Router } from "@angular/router";
 import * as L from "leaflet";
 import { Subscription, interval } from "rxjs";
-import { ApiService } from "../../core/services/api.service";
+import { ApiService, Emergency } from "../../core/services/api.service";
 import { AuthService } from "../../core/services/auth.service";
-
-interface Emergency {
-  idCatalogoEmergencias?: number;
-  nombreCatalogoEmergencias?: string;
-  prioridadCatalogoEmergencias?: string;
-}
 
 interface AlertItem {
   idAlertas?: number;
@@ -40,7 +34,7 @@ interface AlertItem {
             <b>{{ displayName | uppercase }}</b>
             <span><i></i><button (click)="logout()">Cerrar sesión</button></span>
           </div>
-          <button class="avatar" (click)="go('/perfil-vital')" [style.background-image]="'url(' + avatarUrl + ')'"></button>
+          <button class="avatar" (click)="go('/perfil-vital')" [style.background-image]="avatarUrl ? 'url(' + avatarUrl + ')' : ''"></button>
         </div>
       </div>
     </header>
@@ -145,7 +139,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); this.map?.remove(); }
   updateClock(): void { const now = new Date(); this.clock.set(now.toLocaleTimeString("es-GT", { hour12: false })); this.today.set(now.toLocaleDateString("es-GT", { weekday: "short", year: "numeric", month: "short", day: "numeric" }).toUpperCase()); }
-  loadCatalog(): void { this.api.collection("/Sentinel/CatalogoEmergencias").subscribe({ next: (value) => { this.catalog = Array.isArray(value) ? value as Emergency[] : []; this.filteredCatalog = [...this.catalog]; this.changeDetector.detectChanges(); }, error: () => { this.showStatus("Error al cargar catálogo", true); this.changeDetector.detectChanges(); } }); }
+  loadCatalog(): void { this.api.collection<Emergency[]>("/Sentinel/CatalogoEmergencias").subscribe({ next: (value) => { this.catalog = Array.isArray(value) ? value : []; this.filteredCatalog = [...this.catalog]; this.changeDetector.detectChanges(); }, error: () => { this.showStatus("Error al cargar catálogo", true); this.changeDetector.detectChanges(); } }); }
   filterCatalog(): void { const value = this.search.toLowerCase(); this.filteredCatalog = this.catalog.filter((item) => String(item.nombreCatalogoEmergencias ?? "").toLowerCase().includes(value)); }
   loadAlerts(): void { this.api.getAlerts().subscribe({ next: (value) => { const items = Array.isArray(value) ? value : value.data; const userId = this.auth.session()?.idUsers; this.userAlerts = (items as AlertItem[]).filter((item) => Number(item.ciudadanoId ?? item.usuario?.idUsers ?? item.usuario?.id) === userId); this.changeDetector.detectChanges(); }, error: () => { this.userAlerts = []; this.changeDetector.detectChanges(); } }); }
   openAlert(id?: number, silent = false): void { if (!id) return; if (this.userAlerts.some((item) => this.isEditable(item))) { this.showStatus("Existe una alerta activa en resolución", true); return; } this.pendingEmergencyId = id; this.pendingSilent = silent; this.modalOpen = true; this.getLocation(); }

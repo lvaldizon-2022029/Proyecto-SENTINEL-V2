@@ -32,13 +32,17 @@ import { AuthService } from "../../../core/services/auth.service";
 export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  email = "admin@sentinel.local";
-  password = "sentinel";
+  email = "";
+  password = "";
   error = "";
   loading = false;
   showPassword = false;
 
   submit(): void {
+    if (!this.email || !this.password) {
+      this.error = "Ingresa correo y contraseña.";
+      return;
+    }
     this.loading = true;
     this.error = "";
     this.auth.login(this.email, this.password).subscribe({

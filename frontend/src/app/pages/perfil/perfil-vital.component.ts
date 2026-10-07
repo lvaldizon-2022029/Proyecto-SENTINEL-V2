@@ -2,15 +2,9 @@ import { CommonModule } from "@angular/common";
 import { ChangeDetectorRef, Component, OnInit, inject } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
-import { ApiService } from "../../core/services/api.service";
+import { ApiService, UserVitalData } from "../../core/services/api.service";
 import { AuthService } from "../../core/services/auth.service";
-
-interface VitalForm {
-  grupoSanguineo: string;
-  alergias: string;
-  enfermedadesCronicas: string;
-  contactoEmergencia: string;
-}
+import { BLOOD_GROUPS } from "../../core/config/constants";
 
 @Component({
   standalone: true,
@@ -36,11 +30,11 @@ interface VitalForm {
 
         <section class="medical-card">
           <div class="medical-heading"><div><span class="vital-kicker">REGISTRO MÉDICO</span><h2>Datos vitales</h2></div><span class="sync-badge" [class.synced]="recordExists">● {{ recordExists ? "SINCRONIZADO" : "PENDIENTE DE REGISTRO" }}</span></div>
-          <form (ngSubmit)="save()">
+          <form (ngSubmit)="save()" #vitalForm="ngForm">
             <div class="form-section"><h3>Información sanguínea</h3><div class="blood-grid"><button type="button" *ngFor="let group of bloodGroups" [class.selected]="data.grupoSanguineo === group" (click)="data.grupoSanguineo = group">{{ group }}</button></div></div>
             <div class="form-section"><h3>Antecedentes médicos</h3><div class="form-grid"><label>Alergias conocidas<textarea name="allergies" [(ngModel)]="data.alergias" placeholder="Escribe alergias a medicamentos, alimentos u otros..."></textarea></label><label>Enfermedades crónicas<textarea name="conditions" [(ngModel)]="data.enfermedadesCronicas" placeholder="Indica enfermedades o condiciones relevantes..."></textarea></label></div></div>
-            <div class="form-section"><h3>Contacto de emergencia</h3><label>Persona y teléfono de contacto<input name="contact" [(ngModel)]="data.contactoEmergencia" placeholder="Ejemplo: María López - 5555-5555"></label></div>
-            <div class="form-footer"><small>Última actualización: {{ updatedAt ? (updatedAt | date:'medium') : "Aún no guardado" }}</small><button class="save-button" type="submit" [disabled]="loading">{{ loading ? "Guardando..." : "Guardar cambios" }}</button></div>
+            <div class="form-section"><h3>Contacto de emergencia</h3><label>Persona y teléfono de contacto<input name="contact" [(ngModel)]="data.contactoEmergencia" placeholder="Ejemplo: María López - 5555-5555" required #contactInput="ngModel"></label><div class="error" *ngIf="contactInput.invalid && (contactInput.dirty || contactInput.touched)">El contacto de emergencia es obligatorio.</div></div>
+            <div class="form-footer"><small>Última actualización: {{ updatedAt ? (updatedAt | date:'medium') : "Aún no guardado" }}</small><button class="save-button" type="submit" [disabled]="loading || vitalForm.invalid">{{ loading ? "Guardando..." : "Guardar cambios" }}</button></div>
           </form>
           <p class="success" *ngIf="message">{{ message }}</p><p class="error" *ngIf="error">{{ error }}</p>
         </section>
@@ -56,21 +50,22 @@ export class PerfilVitalComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly changeDetector = inject(ChangeDetectorRef);
-  readonly bloodGroups = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
-  data: VitalForm = { grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "" };
+  readonly bloodGroups = BLOOD_GROUPS;
+  data: UserVitalData = { id: 0, idUser: 0, grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "" };
   userName = ""; email = ""; role = "USER"; userId = 0; initials = "U"; avatarUrl = ""; updatedAt = ""; message = ""; error = ""; loading = false; recordExists = false;
 
   ngOnInit(): void {
     const session = this.auth.session(); if (!session) { void this.router.navigateByUrl("/login"); return; }
     this.userId = session.idUsers; this.email = session.emailUsers; this.role = session.rolUsers;
-    this.api.collection(`/Sentinel/Users/${this.userId}`).subscribe({ next: (user: any) => { this.userName = user.nombreUsers ?? user.nombre ?? this.email; this.avatarUrl = user.fotoUrl || this.fallbackAvatar(this.userName); this.initials = this.userName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); this.changeDetector.detectChanges(); } });
-    this.api.collection(`/Sentinel/VitalData/${this.userId}`).subscribe({ next: (value: any) => { this.recordExists = value?.exists !== false; this.updatedAt = value?.ultimaActualizacion ?? value?.fechaActualizacion ?? ""; this.data = { ...this.data, ...value }; this.changeDetector.detectChanges(); }, error: () => { this.error = "No se pudieron cargar los datos vitales."; this.changeDetector.detectChanges(); } });
+    this.api.getUser(this.userId).subscribe({ next: (user: any) => { this.userName = user.nombreUsers ?? user.nombre ?? this.email; this.avatarUrl = user.fotoUrl || this.fallbackAvatar(this.userName); this.initials = this.userName.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); this.changeDetector.detectChanges(); } });
+    this.api.getVitalData(this.userId).subscribe({ next: (value: any) => { this.recordExists = value?.exists !== false; this.updatedAt = value?.ultimaActualizacion ?? value?.fechaActualizacion ?? ""; this.data = { ...this.data, ...value }; this.changeDetector.detectChanges(); }, error: () => { this.error = "No se pudieron cargar los datos vitales."; this.changeDetector.detectChanges(); } });
   }
   fallbackAvatar(name: string): string { return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00C9A7&color=fff&bold=true`; }
-  selectPhoto(event: Event): void { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { this.avatarUrl = String(reader.result); this.api.update("/Sentinel/Users", this.userId, { fotoUrl: this.avatarUrl }).subscribe({ error: () => this.error = "La fotografía se mostró localmente, pero no pudo guardarse." }); }; reader.readAsDataURL(file); }
+  selectPhoto(event: Event): void { const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { this.avatarUrl = String(reader.result); this.api.updateUser(this.userId, { fotoUrl: this.avatarUrl }).subscribe({ error: () => this.error = "La fotografía se mostró localmente, pero no pudo guardarse." }); }; reader.readAsDataURL(file); }
   save(): void {
     this.loading = true; this.message = ""; this.error = "";
-    const request = this.recordExists ? this.api.update("/Sentinel/VitalData", this.userId, { idUser: this.userId, ...this.data }) : this.api.create("/Sentinel/VitalData", { idUser: this.userId, ...this.data });
+    const payload = { ...this.data, idUser: this.userId };
+    const request = this.recordExists ? this.api.updateVitalData(this.userId, payload) : this.api.createVitalData(payload);
     request.subscribe({ next: () => { this.recordExists = true; this.updatedAt = new Date().toISOString(); this.loading = false; this.message = "Información vital actualizada correctamente."; this.changeDetector.detectChanges(); }, error: (error) => { this.loading = false; this.error = error.error?.error ?? "No se pudo guardar la información vital."; this.changeDetector.detectChanges(); } });
   }
   logout(): void { this.auth.logout(); void this.router.navigateByUrl("/login"); }
