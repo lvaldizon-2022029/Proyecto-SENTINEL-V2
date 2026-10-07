@@ -1,15 +1,14 @@
 import { Router } from "express";
 import { store } from "../services/store";
 import { authenticate, crudRouter, requireRole } from "./middleware";
+import { agendaActionsRouter } from "./agenda.router";
 
 export const despachosRouter = crudRouter("/Sentinel/DespachosEmergencia", "despachos", ["STAFF", "ADMIN"]);
-export const despachosAliasRouter = crudRouter("/Sentinel/DespachoEmergencias", "despachos", ["STAFF", "ADMIN"]);
-export const despachosLegacyRouter = crudRouter("/Sentinel/despachos", "despachos", ["STAFF", "ADMIN"]);
 export const especialistasRouter = crudRouter("/Sentinel/Especialistas", "especialistas");
 export const estacionesRouter = crudRouter("/Sentinel/Estaciones", "estaciones", ["STAFF", "ADMIN"], ["ADMIN"]);
 export const staffRouter = crudRouter("/Sentinel/StaffAutoridad", "staffAutoridad", ["STAFF", "ADMIN"], ["ADMIN"]);
 export const agendaRouter = crudRouter("/Sentinel/AgendaCharlas", "agendaCharlas", ["STAFF", "ADMIN"]);
-export const vitalDataRouter = crudRouter("/Sentinel/VitalData", "vitalData", ["USER", "ADMIN"]);
+export { agendaActionsRouter };
 export const operationsRouter = Router();
 operationsRouter.get("/estaciones/buscar", authenticate, requireRole("STAFF", "ADMIN"), async (req, res) => {
   const name = String(req.query.nombre ?? "").toLowerCase();
@@ -34,10 +33,6 @@ operationsRouter.get("/staff/buscar/cargo", authenticate, requireRole("STAFF", "
   return matches.length ? res.json(matches) : res.status(404).json({ error: `No se encontró personal con el cargo: ${cargo}` });
 });
 operationsRouter.get("/staff/check", (_req, res) => res.json({ status: "Operacional", servicio: "Sentinel Authority Staff Service", timestamp: new Date().toISOString() }));
-operationsRouter.post("/agenda/:id/confirmar", authenticate, requireRole("STAFF", "ADMIN"), async (req, res) => {
-  const item = await store.update("agendaCharlas", Number(req.params.id), { estado: "CONFIRMADA", estadoAgendaCharlas: "CONFIRMADA" });
-  return item ? res.json({ mensaje: `Asistencia confirmada para la charla: ${req.params.id}` }) : res.status(400).json({ error: "No se pudo confirmar. Verifique si la charla ya pasó o fue cancelada." });
-});
 operationsRouter.post("/DespachosEmergencia", authenticate, requireRole("STAFF", "ADMIN"), async (req, res) => {
   const payload = req.body as { idAlerta?: number; idEstacion?: number; unidadId?: string };
   const item = await store.create("despachos", {
@@ -46,8 +41,4 @@ operationsRouter.post("/DespachosEmergencia", authenticate, requireRole("STAFF",
     unidad: payload.unidadId
   });
   return res.status(201).json({ mensaje: "Unidad despachada correctamente", datos: item });
-});
-operationsRouter.post("/agenda-charlas/:id/confirmar", authenticate, requireRole("STAFF", "ADMIN"), async (req, res) => {
-  const item = await store.update("agendaCharlas", Number(req.params.id), { estado: "CONFIRMADA", estadoAgendaCharlas: "CONFIRMADA" });
-  return item ? res.json({ mensaje: `Asistencia confirmada para la charla: ${req.params.id}` }) : res.status(400).json({ error: "No se pudo confirmar. Verifique si la charla ya pasó o fue cancelada." });
 });

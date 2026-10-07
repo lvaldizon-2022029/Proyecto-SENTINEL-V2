@@ -1,6 +1,7 @@
-import mysql, { Pool } from "mysql2/promise";
+import mysql, { Pool, RowDataPacket } from "mysql2/promise";
 import bcrypt from "bcryptjs";
 import { RecordEntity, Role, User } from "../models/types";
+import { DEFAULT_ADMIN, DEFAULT_USER, DB_CONFIG } from "../config/constants";
 
 type DbValue = string | number | boolean | Date | null;
 
@@ -10,7 +11,7 @@ const rowToUser = (row: Record<string, unknown>): User => ({
   emailUsers: String(row.emailUsers),
   contrasenaUsers: String(row.contrasenaUsers),
   rolUsers: String(row.rolUsers) as Role,
-  pinemergenciaUsers: String(row.pinemergenciaUsers ?? "0000"),
+  pinemergenciaUsers: String(row.pinemergenciaUsers ?? DEFAULT_USER.pin),
   fechaCreacion: row.fechaCreacion ? new Date(row.fechaCreacion as string | Date).toISOString() : new Date().toISOString(),
   fotoUrl: row.fotoUrl ? String(row.fotoUrl) : null
 });
@@ -21,15 +22,20 @@ export class MySqlStore {
   close(): Promise<void> { return this.pool.end(); }
 
   async initialize(): Promise<void> {
-    await this.pool.execute("ALTER TABLE users MODIFY COLUMN fotoUrl MEDIUMTEXT NULL");
+    const [columns] = await this.pool.query<RowDataPacket[]>(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'fotoUrl'"
+    );
+    if ((columns as RowDataPacket[]).length > 0) {
+      await this.pool.execute("ALTER TABLE users MODIFY COLUMN fotoUrl MEDIUMTEXT NULL");
+    }
     const [rows] = await this.pool.query("SELECT idUsers FROM users LIMIT 1");
     if ((rows as unknown[]).length === 0) {
       await this.createUser({
-        nombreUsers: "Administrador SENTINEL",
-        emailUsers: "admin@sentinel.local",
-        password: "sentinel",
-        rolUsers: "ADMIN",
-        pinemergenciaUsers: "0000"
+        nombreUsers: DEFAULT_ADMIN.nombre,
+        emailUsers: DEFAULT_ADMIN.email,
+        password: DEFAULT_ADMIN.password,
+        rolUsers: DEFAULT_ADMIN.rol,
+        pinemergenciaUsers: DEFAULT_ADMIN.pin
       });
     }
   }
@@ -51,10 +57,10 @@ export class MySqlStore {
   async createUser(input: Partial<User> & { password?: string }): Promise<User> {
     if (!input.nombreUsers || !input.emailUsers) throw new Error("El nombre y el email son obligatorios");
     if (await this.findUserByEmail(input.emailUsers)) throw new Error("El correo electrónico ya se encuentra registrado en el sistema.");
-    const hash = await bcrypt.hash(input.password ?? input.contrasenaUsers ?? "sentinel", 10);
+    const hash = await bcrypt.hash(input.password ?? input.contrasenaUsers ?? DEFAULT_USER.password, 10);
     const [result] = await this.pool.execute(
       "INSERT INTO users (nombreUsers,emailUsers,contrasenaUsers,rolUsers,pinemergenciaUsers,fotoUrl) VALUES (?,?,?,?,?,?)",
-      [input.nombreUsers, input.emailUsers, hash, input.rolUsers ?? "USER", input.pinemergenciaUsers ?? "0000", input.fotoUrl ?? null]
+      [input.nombreUsers, input.emailUsers, hash, input.rolUsers ?? DEFAULT_USER.rol, input.pinemergenciaUsers ?? DEFAULT_USER.pin, input.fotoUrl ?? null]
     );
     return (await this.findUser(Number((result as { insertId: number }).insertId)))!;
   }
@@ -180,7 +186,7 @@ export class MySqlStore {
     return mapped;
   }
 
-  async collection(name: string, query = ""): Promise<RecordEntity[]> {
+  async collection(name: string, query = "", page?: number, limit?: number): Promise<RecordEntity[]> {
     const definition = this.table(name);
     const joins: Record<string, string> = {
       alertas: " LEFT JOIN users u ON u.idUsers = t.ciudadanoid LEFT JOIN catalogoemergencias ce ON ce.idCatalogoEmergencias = t.emergenciaid ",
@@ -200,10 +206,41 @@ export class MySqlStore {
       staffAutoridad: ", se.idEstaciones rel_estacion_id, se.nombreEstaciones rel_estacion_nombre, su.idUsers rel_user_id, su.nombreUsers rel_user_nombre",
       vitalData: ", vu.idUsers rel_user_id, vu.nombreUsers rel_user_nombre, vu.emailUsers rel_user_email, vu.fotoUrl rel_user_foto"
     };
-    const search = query ? ` WHERE CONCAT_WS(' ', ${definition.columns.map((column) => `t.\`${column}\``).join(", ")}) LIKE ?` : "";
-    const [rows] = await this.pool.query(`SELECT t.*${relationColumns[name] ?? ""} FROM \`${definition.table}\` t${joins[name] ?? ""}${search} ORDER BY t.\`${definition.id}\` DESC`, query ? [`%${query}%`] : []);
+    const whereClause = query ? ` WHERE CONCAT_WS(' ', ${definition.columns.map((column) => `t.\`${column}\``).join(", ")}) LIKE ?` : "";
+    const limitClause = page && limit ? ` LIMIT ${limit} OFFSET ${(page - 1) * limit}` : "";
+    const params = query ? [`%${query}%`] : [];
+    const [rows] = await this.pool.query(`SELECT t.*${relationColumns[name] ?? ""} FROM \`${definition.table}\` t${joins[name] ?? ""}${whereClause} ORDER BY t.\`${definition.id}\` DESC${limitClause}`, params);
     return (rows as Record<string, unknown>[]).map((row) => this.fromLegacy(name, row));
   }
+
+  async findById(name: string, id: number): Promise<RecordEntity | undefined> {
+    const definition = this.table(name);
+    const joins: Record<string, string> = {
+      alertas: " LEFT JOIN users u ON u.idUsers = t.ciudadanoid LEFT JOIN catalogoemergencias ce ON ce.idCatalogoEmergencias = t.emergenciaid ",
+      despachos: " LEFT JOIN alertas al ON al.idAlertas = t.alertaid LEFT JOIN estaciones es ON es.idEstaciones = t.estacionid ",
+      agendaCharlas: " LEFT JOIN users cu ON cu.idUsers = t.ciudadanoid LEFT JOIN especialistas sp ON sp.userid = t.especialistaid ",
+      especialistas: " LEFT JOIN users eu ON eu.idUsers = t.userid ",
+      estaciones: " LEFT JOIN catalogoentidades en ON en.idCatalogoEntidades = t.tipoentidadid ",
+      staffAutoridad: " LEFT JOIN estaciones se ON se.idEstaciones = t.estacionid LEFT JOIN users su ON su.idUsers = t.userid ",
+      vitalData: " LEFT JOIN users vu ON vu.idUsers = t.idUser "
+    };
+    const relationColumns: Record<string, string> = {
+      alertas: ", u.idUsers rel_usuario_id, u.nombreUsers rel_usuario_nombre, u.emailUsers rel_usuario_email, ce.idCatalogoEmergencias rel_emergencia_id, ce.nombreCatalogoEmergencias rel_emergencia_nombre, ce.prioridadCatalogoEmergencias rel_emergencia_prioridad",
+      despachos: ", al.idAlertas rel_alerta_id, al.estadoAlertas rel_alerta_estado, es.idEstaciones rel_estacion_id, es.nombreEstaciones rel_estacion_nombre",
+      agendaCharlas: ", cu.idUsers rel_ciudadano_id, cu.nombreUsers rel_ciudadano_nombre, sp.userid rel_especialista_id, sp.especialidadEspecialistas rel_especialista_especialidad",
+      especialistas: ", eu.idUsers rel_user_id, eu.nombreUsers rel_user_nombre, eu.emailUsers rel_user_email",
+      estaciones: ", en.idCatalogoEntidades rel_entidad_id, en.nombreCatalogoEntidades rel_entidad_nombre",
+      staffAutoridad: ", se.idEstaciones rel_estacion_id, se.nombreEstaciones rel_estacion_nombre, su.idUsers rel_user_id, su.nombreUsers rel_user_nombre",
+      vitalData: ", vu.idUsers rel_user_id, vu.nombreUsers rel_user_nombre, vu.emailUsers rel_user_email, vu.fotoUrl rel_user_foto"
+    };
+    const [rows] = await this.pool.query(
+      `SELECT t.*${relationColumns[name] ?? ""} FROM \`${definition.table}\` t${joins[name] ?? ""} WHERE t.\`${definition.id}\` = ?`,
+      [id]
+    );
+    const row = (rows as Record<string, unknown>[])[0];
+    return row ? this.fromLegacy(name, row) : undefined;
+  }
+
   async create(name: string, input: Record<string, unknown>): Promise<RecordEntity> {
     const definition = this.table(name);
     const mapped = this.toLegacy(name, input);
@@ -219,20 +256,21 @@ export class MySqlStore {
       values
     );
     const id = name === "especialistas" || name === "vitalData" ? Number(mapped[definition.id]) : Number((result as { insertId: number }).insertId);
-    const rows = await this.collection(name);
-    return rows.find((row) => row.id === id) ?? { id, ...input };
+    const created = await this.findById(name, id);
+    return created ?? { id, ...input };
   }
+
   async update(name: string, id: number, input: Record<string, unknown>): Promise<RecordEntity | undefined> {
     const definition = this.table(name);
     const mapped = this.toLegacy(name, input);
     const columns = definition.columns.filter((column) => column in mapped);
-    if (columns.length === 0) return (await this.collection(name)).find((entry) => entry.id === id);
+    if (columns.length === 0) return this.findById(name, id);
     const [result] = await this.pool.execute(
       `UPDATE \`${definition.table}\` SET ${columns.map((column) => `\`${column}\`=?`).join(",")} WHERE \`${definition.id}\`=?`,
       [...columns.map((column) => mapped[column] as DbValue), id]
     );
     if (Number((result as { affectedRows: number }).affectedRows) === 0) return undefined;
-    return (await this.collection(name)).find((entry) => entry.id === id);
+    return this.findById(name, id);
   }
   async delete(name: string, id: number): Promise<boolean> {
     const definition = this.table(name);

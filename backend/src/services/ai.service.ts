@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { AI_CONFIG } from "../config/constants";
 
 export class AiProviderError extends Error {
   constructor(message: string, readonly statusCode: number) {
@@ -18,11 +19,11 @@ export class AiService {
     const vital = (await store.collection("vitalData")).find((item) => item.id === userId || item.idUser === userId);
     const context = `Nombre: ${user?.nombreUsers ?? "No disponible"}\nDatos vitales: ${vital ? JSON.stringify(vital) : "No registrados"}`;
     const system = mode === "medical"
-      ? `Eres el nucleo de inteligencia medica de SENTINEL en Guatemala. Responde unicamente sobre primeros auxilios y orientacion medica. En riesgo vital indica llamar al 123 o 122. No sustituyas a un medico. Se claro y breve.\n${context}`
-      : `Eres el modulo de bienestar emocional de SENTINEL en Guatemala. Responde con empatia, apoyo psicologico inicial y tecnicas seguras. En crisis indica contactar servicios de emergencia. No sustituyas terapia profesional.\n${context}`;
+      ? AI_CONFIG.medicalSystemPrompt.replace("{bomberos}", AI_CONFIG.emergencyNumbers.bomberos).replace("{policia}", AI_CONFIG.emergencyNumbers.policia) + `\n${context}`
+      : AI_CONFIG.wellbeingSystemPrompt + `\n${context}`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 25_000);
+    const timeout = setTimeout(() => controller.abort(), AI_CONFIG.timeoutMs);
     let response: Response;
     try {
       response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -30,8 +31,8 @@ export class AiService {
         signal: controller.signal,
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
         body: JSON.stringify({
-          model: process.env.GROQ_MODEL ?? "qwen/qwen3.8-27b",
-          temperature: 0.3,
+          model: AI_CONFIG.model,
+          temperature: AI_CONFIG.temperature,
           messages: [{ role: "system", content: system }, { role: "user", content: prompt }]
         })
       });

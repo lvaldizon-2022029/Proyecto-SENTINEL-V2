@@ -1,7 +1,3 @@
-import { RecordEntity } from "./types";
+import { Especialista } from "./types";
 
-export interface Especialista extends RecordEntity {
-  userid?: number;
-  especialidad?: string;
-  biografia?: string;
-}
+export type { Especialista };

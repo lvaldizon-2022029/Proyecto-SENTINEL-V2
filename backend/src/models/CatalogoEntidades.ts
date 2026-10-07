@@ -1,7 +1,3 @@
-import { RecordEntity } from "./types";
+import { CatalogoEntidad } from "./types";
 
-export interface CatalogoEntidad extends RecordEntity {
-  idCatalogoEntidades: number;
-  nombreCatalogoEntidades?: string;
-  nombre?: string;
-}
+export type { CatalogoEntidad };

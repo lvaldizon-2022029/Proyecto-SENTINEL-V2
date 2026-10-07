@@ -2,8 +2,10 @@ import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response, Router } from "express";
 import { store } from "../services/store";
 import { AuthenticatedRequest, Role } from "../models/types";
+import { JWT_CONFIG } from "../config/constants";
 
-const jwtSecret = process.env.JWT_SECRET ?? "development-only-secret";
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret) throw new Error("JWT_SECRET no configurado. Defínelo en backend/.env");
 
 export const publicUser = (user: Awaited<ReturnType<typeof store.findUser>>) => {
   if (!user) return user;
@@ -12,7 +14,7 @@ export const publicUser = (user: Awaited<ReturnType<typeof store.findUser>>) => 
 };
 
 export const tokenFor = (user: NonNullable<Awaited<ReturnType<typeof store.findUser>>>) =>
-  jwt.sign({ sub: user.idUsers, email: user.emailUsers, role: user.rolUsers }, jwtSecret, { expiresIn: "8h" });
+  jwt.sign({ sub: user.idUsers, email: user.emailUsers, role: user.rolUsers }, jwtSecret, { expiresIn: JWT_CONFIG.expiresIn as jwt.SignOptions["expiresIn"] });
 
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   const value = req.header("authorization");
@@ -42,14 +44,14 @@ export const crudRouter = (path: string, collection: string, readRoles: Role[] =
     const page = Math.max(Number(req.query.page ?? 1), 1);
     const limit = Math.min(Math.max(Number(req.query.limit ?? 50), 1), 100);
     const hasPagination = req.query.page !== undefined || req.query.limit !== undefined || req.query.search !== undefined;
-    const items = await store.collection(collection, String(req.query.search ?? ""));
+    const items = await store.collection(collection, String(req.query.search ?? ""), page, limit);
     if (!hasPagination) return res.json(items);
-    return res.json({ data: items.slice((page - 1) * limit, page * limit), page, limit, total: items.length });
+    return res.json({ data: items, page, limit, total: items.length });
   });
   router.get("/:id", authenticate, requireRole(...readRoles), async (req, res, next) => {
     const id = String(req.params.id);
     if (!/^\d+$/.test(id)) return next();
-    const item = (await store.collection(collection)).find((entry) => entry.id === Number(id));
+    const item = await store.findById(collection, Number(id));
     return item ? res.json(item) : res.status(404).json({ error: "Recurso no encontrado" });
   });
   router.post("/", authenticate, requireRole(...writeRoles), async (req, res) =>

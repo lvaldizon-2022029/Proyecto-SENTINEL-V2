@@ -4,12 +4,12 @@ import express, { NextFunction, Request, Response } from "express";
 import { aiRouter } from "../router/ai.router";
 import { alertasRouter, alertActionsRouter } from "../router/alertas.router";
 import { authRouter } from "../router/auth.router";
-import { catalogoActionsRouter, catalogoEmergenciasRouter, catalogoEntidadesRouter, catalogoLegacyRouter } from "../router/catalogos.router";
+import { catalogoActionsRouter, catalogoEmergenciasRouter, catalogoEntidadesRouter } from "../router/catalogos.router";
 import { dashboardRouter } from "../router/dashboard.router";
 import { diarioRouter } from "../router/diario.router";
-import { agendaRouter, despachosAliasRouter, despachosLegacyRouter, despachosRouter, estacionesRouter, especialistasRouter, operationsRouter, staffRouter, vitalDataRouter } from "../router/operaciones.router";
+import { agendaRouter, agendaActionsRouter, despachosRouter, estacionesRouter, especialistasRouter, operationsRouter, staffRouter } from "../router/operaciones.router";
 import { usersRouter } from "../router/users.router";
-import { vitalDataLegacyRouter } from "../router/vital-data.router";
+import { vitalDataRouter } from "../router/vital-data.router";
 import { store } from "../services/store";
 import { authenticate, requireRole } from "../router/middleware";
 import { AuthenticatedRequest } from "../models/types";
@@ -50,16 +50,12 @@ app.use("/Sentinel/alertas", alertActionsRouter);
 app.use("/Sentinel/alertas", alertasRouter);
 app.use("/Sentinel/CatalogoEmergencias", catalogoEmergenciasRouter);
 app.use("/Sentinel/CatalogoEntidades", catalogoEntidadesRouter);
-app.use("/Sentinel/CatalogoEmergencias", catalogoLegacyRouter);
-app.use("/Sentinel/CatalogoEntidades", catalogoLegacyRouter);
 app.use("/Sentinel/catalogo-emergencias", catalogoEmergenciasRouter);
 app.use("/Sentinel/catalogo-entidades", catalogoEntidadesRouter);
-app.use("/Sentinel/catalogo-emergencias", catalogoLegacyRouter);
-app.use("/Sentinel/catalogo-entidades", catalogoLegacyRouter);
 app.use("/Sentinel", catalogoActionsRouter);
 app.use("/Sentinel/DespachosEmergencia", despachosRouter);
-app.use("/Sentinel/DespachoEmergencias", despachosAliasRouter);
-app.use("/Sentinel/despachos", despachosLegacyRouter);
+app.use("/Sentinel/DespachoEmergencias", despachosRouter);
+app.use("/Sentinel/despachos", despachosRouter);
 app.use("/Sentinel/Especialistas", especialistasRouter);
 app.use("/Sentinel/especialistas", especialistasRouter);
 app.use("/Sentinel/Estaciones", estacionesRouter);
@@ -67,29 +63,10 @@ app.use("/Sentinel/estaciones", estacionesRouter);
 app.use("/Sentinel/StaffAutoridad", staffRouter);
 app.use("/Sentinel/staff-autoridad", staffRouter);
 app.use("/Sentinel/AgendaCharlas", agendaRouter);
+app.use("/Sentinel/AgendaCharlas", agendaActionsRouter);
 app.use("/Sentinel/agenda-charlas", agendaRouter);
-app.post("/Sentinel/AgendaCharlas/:id/confirmar", authenticate, requireRole("STAFF", "ADMIN"), async (req, res) => {
-  const item = await store.update("agendaCharlas", Number(req.params.id), { estado: "CONFIRMADA", estadoAgendaCharlas: "CONFIRMADA" });
-  return item ? res.json({ mensaje: `Asistencia confirmada para la charla: ${req.params.id}` }) : res.status(400).json({ error: "No se pudo confirmar. Verifique si la charla ya pasó o fue cancelada." });
-});
-app.get("/Sentinel/VitalData/:id", authenticate, requireRole("USER", "ADMIN"), async (req, res) => {
-  const id = Number(req.params.id);
-  const user = (req as Request & AuthenticatedRequest).user;
-  if (user?.rolUsers === "USER" && user.idUsers !== id) return res.status(403).json({ error: "No puedes consultar los datos vitales de otro usuario." });
-  const item = (await store.collection("vitalData")).find((entry) => entry.id === id || entry.idUser === id);
-  if (item) return res.json({
-    ...item,
-    id: Number(item.id ?? item.idUser),
-    idUser: Number(item.idUser ?? item.id),
-    grupoSanguineo: item.grupoSanguineo ?? item.gruposanguineoUser ?? "",
-    alergias: item.alergias ?? item.alergiasUser ?? "",
-    enfermedadesCronicas: item.enfermedadesCronicas ?? item.enfermedadescronicasUser ?? "",
-    contactoEmergencia: item.contactoEmergencia ?? item.contactoemergenciaUser ?? ""
-  });
-  return res.json({ exists: false, id, idUser: id, grupoSanguineo: "", alergias: "", enfermedadesCronicas: "", contactoEmergencia: "", telefonoEmergencia: "" });
-});
+app.use("/Sentinel/agenda-charlas", agendaActionsRouter);
 app.use("/Sentinel/VitalData", vitalDataRouter);
-app.use("/Sentinel/VitalData", vitalDataLegacyRouter);
 app.use("/Sentinel", operationsRouter);
 app.use("/Sentinel/Diario", diarioRouter);
 app.use("/Sentinel/AI", aiRouter);

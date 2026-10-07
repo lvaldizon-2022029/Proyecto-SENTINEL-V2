@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { RecordEntity, Role, User } from "../models/types";
 import { createMySqlStore, MySqlStore } from "../db/database";
+import { DEFAULT_ADMIN, DEFAULT_USER } from "../config/constants";
 
 export interface Store {
   readonly persistence: string;
@@ -10,7 +11,8 @@ export interface Store {
   createUser(input: Partial<User> & { password?: string }): Promise<User>;
   updateUser(id: number, patch: Partial<User> & { password?: string }): Promise<User | undefined>;
   deleteUser(id: number): Promise<boolean>;
-  collection(name: string, query?: string): Promise<RecordEntity[]>;
+  collection(name: string, query?: string, page?: number, limit?: number): Promise<RecordEntity[]>;
+  findById(name: string, id: number): Promise<RecordEntity | undefined>;
   create(name: string, input: Record<string, unknown>): Promise<RecordEntity>;
   update(name: string, id: number, input: Record<string, unknown>): Promise<RecordEntity | undefined>;
   delete(name: string, id: number): Promise<boolean>;
@@ -23,10 +25,10 @@ export class MemoryStore implements Store {
   private readonly collections = new Map<string, RecordEntity[]>();
 
   constructor() {
-    const password = bcrypt.hashSync("sentinel", 10);
+    const password = bcrypt.hashSync(DEFAULT_ADMIN.password, 10);
     this.users.push({
-      idUsers: this.nextId++, nombreUsers: "Administrador SENTINEL", emailUsers: "admin@sentinel.local",
-      contrasenaUsers: password, rolUsers: "ADMIN", pinemergenciaUsers: "0000",
+      idUsers: this.nextId++, nombreUsers: DEFAULT_ADMIN.nombre, emailUsers: DEFAULT_ADMIN.email,
+      contrasenaUsers: password, rolUsers: DEFAULT_ADMIN.rol, pinemergenciaUsers: DEFAULT_ADMIN.pin,
       fechaCreacion: new Date().toISOString(), fotoUrl: null
     });
   }
@@ -38,8 +40,8 @@ export class MemoryStore implements Store {
     if (await this.findUserByEmail(input.emailUsers)) throw new Error("El correo electrónico ya se encuentra registrado en el sistema.");
     const user: User = {
       idUsers: this.nextId++, nombreUsers: input.nombreUsers, emailUsers: input.emailUsers,
-      contrasenaUsers: await bcrypt.hash(input.password ?? input.contrasenaUsers ?? "sentinel", 10),
-      rolUsers: (input.rolUsers ?? "USER") as Role, pinemergenciaUsers: input.pinemergenciaUsers ?? "0000",
+      contrasenaUsers: await bcrypt.hash(input.password ?? input.contrasenaUsers ?? DEFAULT_USER.password, 10),
+      rolUsers: (input.rolUsers ?? DEFAULT_USER.rol) as Role, pinemergenciaUsers: input.pinemergenciaUsers ?? DEFAULT_USER.pin,
       fechaCreacion: new Date().toISOString(), fotoUrl: input.fotoUrl ?? null
     };
     this.users.push(user); return user;
@@ -53,9 +55,13 @@ export class MemoryStore implements Store {
     return user;
   }
   async deleteUser(id: number): Promise<boolean> { const i = this.users.findIndex((user) => user.idUsers === id); if (i < 0) return false; this.users.splice(i, 1); return true; }
-  async collection(name: string, query = ""): Promise<RecordEntity[]> {
+  async collection(name: string, query = "", _page?: number, _limit?: number): Promise<RecordEntity[]> {
     const values = this.collections.get(name) ?? [];
     return query ? values.filter((item) => JSON.stringify(item).toLowerCase().includes(query.toLowerCase())) : values;
+  }
+  async findById(name: string, id: number): Promise<RecordEntity | undefined> {
+    const values = this.collections.get(name) ?? [];
+    return values.find((item) => item.id === id);
   }
   async create(name: string, input: Record<string, unknown>): Promise<RecordEntity> { const entity = { id: this.nextId++, ...input }; const list = this.collections.get(name) ?? []; list.push(entity); this.collections.set(name, list); return entity; }
   async update(name: string, id: number, input: Record<string, unknown>): Promise<RecordEntity | undefined> { const entity = (await this.collection(name)).find((item) => item.id === id); if (!entity) return undefined; Object.assign(entity, input); return entity; }

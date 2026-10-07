@@ -1,9 +1,3 @@
-import { RecordEntity } from "./types";
+import { CatalogoEmergencia } from "./types";
 
-export interface CatalogoEmergencia extends RecordEntity {
-  idCatalogoEmergencias: number;
-  nombreCatalogoEmergencias?: string;
-  prioridadCatalogoEmergencias?: string;
-  nombre?: string;
-  prioridad?: string;
-}
+export type { CatalogoEmergencia };

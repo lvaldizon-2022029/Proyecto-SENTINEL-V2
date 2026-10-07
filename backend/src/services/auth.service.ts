@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { store } from "./store";
 import { publicUser, tokenFor } from "../router/middleware";
+import { DEFAULT_USER } from "../config/constants";
 
 export class AuthService {
   async register(input: Record<string, unknown>) {
@@ -8,8 +9,8 @@ export class AuthService {
       ...input,
       nombreUsers: String(input.nombreUsers ?? input.nombre ?? ""),
       emailUsers: String(input.emailUsers ?? input.email ?? ""),
-      rolUsers: String(input.rolUsers ?? "USER"),
-      pinemergenciaUsers: String(input.pinemergenciaUsers ?? "0000")
+      rolUsers: String(input.rolUsers ?? DEFAULT_USER.rol),
+      pinemergenciaUsers: String(input.pinemergenciaUsers ?? DEFAULT_USER.pin)
     };
     const user = await store.createUser({
       ...normalized,
