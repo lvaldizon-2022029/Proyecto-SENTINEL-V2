@@ -12,7 +12,7 @@ Plataforma full-stack para coordinar alertas comunitarias, respuesta ante emerge
 | IA externa | Groq (`qwen3`, solo endpoints `/Sentinel/AI/*`) |
 | Docs API | OpenAPI 3.0 (`backend/openapi.yaml`) |
 
-Documentación: [Arquitectura](docs/ARCHITECTURE.md) · [Diccionario de datos](docs/DATA_DICTIONARY.md) · [Endpoints](docs/ENDPOINTS.md) · [Instrucciones de agente](AGENTS.md).
+Documentación: [Análisis y alcance](docs/Analisis-y-Alcance.md) · [Arquitectura del sistema](docs/Arquitectura-del-Sistema.md) · [Diccionario de datos](docs/Diccionario-de-Datos.md) · [Guía de la API](docs/Guia-de-la-API.md) · [Plan de pruebas](docs/Plan-de-Pruebas.md) · [Instrucciones de agente](AGENTS.md).
 
 ## Requisitos
 
