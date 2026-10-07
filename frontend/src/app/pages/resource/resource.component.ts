@@ -40,7 +40,7 @@ interface FieldConfig {
         <div class="table-toolbar"><input class="input-clinical" [(ngModel)]="search" (ngModelChange)="filter()" [placeholder]="searchPlaceholder()" aria-label="Buscar registros"><button type="button" class="secondary" (click)="load()">Actualizar</button></div>
         <form [formGroup]="formGroup" (ngSubmit)="save()" class="resource-form" *ngIf="canCreate() || editingId">
           <div *ngFor="let field of fieldConfigs" class="form-field">
-            <label [for]="'field-' + field.name">{{ field.label }}<span class="required" *ngIf="field.required">*</span></label>
+            <label [for]="'field-' + field.name">{{ field.label }}<span class="required" *ngIf="field.required">*</span><span class="locked" *ngIf="fieldControl(field.name).disabled" title="El ID se genera automáticamente y no se puede cambiar">🔒</span></label>
             <div class="input-wrapper">
               <textarea *ngIf="field.type === 'textarea'" [id]="'field-' + field.name" [formControlName]="field.name" [placeholder]="field.placeholder" rows="3"></textarea>
               <select *ngIf="field.type === 'select'" [id]="'field-' + field.name" [formControlName]="field.name">
@@ -98,6 +98,7 @@ interface FieldConfig {
     @media(max-width:760px){.resource-form{grid-template-columns:1fr}.page-card{padding:24px 18px}}
     .form-field label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
     .required { color: #dc2626; margin-left: 4px; }
+    .locked { margin-left: 4px; font-size: 11px; }
     .input-wrapper { position: relative; }
     .input-wrapper input, .input-wrapper select, .input-wrapper textarea {
       width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px;
@@ -115,6 +116,7 @@ interface FieldConfig {
     .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
     .secondary { padding: 12px 24px; background: #f1f5f9; color: #475569; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
     .danger { background: #fee2e2; color: #dc2626; }
+    .input-wrapper input:disabled, .input-wrapper select:disabled, .input-wrapper textarea:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
   `]
 })
 export class ResourceComponent implements OnInit, OnDestroy {
@@ -246,6 +248,19 @@ export class ResourceComponent implements OnInit, OnDestroy {
   canDelete(): boolean { return this.config.canDelete !== false && this.canWrite(); }
 
   fieldControl(name: string): AbstractControl { return this.formGroup.get(name)!; }
+
+  isIdField(name: string): boolean {
+    return /Id|ID|^id|_id|id$/.test(name);
+  }
+
+  private lockIds(locked: boolean): void {
+    for (const field of this.fieldConfigs) {
+      if (!this.isIdField(field.name)) continue;
+      const control = this.fieldControl(field.name);
+      if (locked) control.disable({ emitEvent: false });
+      else control.enable({ emitEvent: false });
+    }
+  }
 
   load(): void {
     if (!this.canRead()) {
@@ -389,11 +404,12 @@ export class ResourceComponent implements OnInit, OnDestroy {
     if (!this.canEdit()) return;
     this.editingId = this.resourceId(item);
     this.formGroup.patchValue(item);
+    this.lockIds(true);
     this.formSubmitted = false;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  reset(): void { this.editingId = undefined; this.formGroup.reset(); this.formSubmitted = false; }
+  reset(): void { this.editingId = undefined; this.formGroup.reset(); this.lockIds(false); this.formSubmitted = false; }
 
   save(): void {
     if (!this.canWrite()) { this.error = "No tienes permisos para realizar esta operación."; return; }
