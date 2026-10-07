@@ -12,7 +12,7 @@ Plataforma full-stack para coordinar alertas comunitarias, respuesta ante emerge
 | IA externa | Groq (`qwen3`, solo endpoints `/Sentinel/AI/*`) |
 | Docs API | OpenAPI 3.0 (`backend/openapi.yaml`) |
 
-Documentación: [Análisis y alcance](docs/Analisis-y-Alcance.md) · [Arquitectura del sistema](docs/Arquitectura-del-Sistema.md) · [Diccionario de datos](docs/Diccionario-de-Datos.md) · [Guía de la API](docs/Guia-de-la-API.md) · [Plan de pruebas](docs/Plan-de-Pruebas.md) · [Instrucciones de agente](AGENTS.md).
+Documentación: [Análisis y alcance](docs/Analisis-y-Alcance.md) · [Plan de trabajo](docs/Plan-de-Trabajo.md) · [Arquitectura del sistema](docs/Arquitectura-del-Sistema.md) · [Diccionario de datos](docs/Diccionario-de-Datos.md) · [Guía de la API](docs/Guia-de-la-API.md) · [Plan de pruebas](docs/Plan-de-Pruebas.md) · [Sistema visual](docs/Sistema-Visual.md) · [Instrucciones de agente](AGENTS.md).
 
 ## Requisitos
 
@@ -69,7 +69,11 @@ Verificación: `npm run build` + `npm test` en cada paquete (backend 19 tests, f
 4. Frontend: `ng build` y servir `dist/`; apunta a la API por `environment.prod.ts` (`apiUrl`).
 5. Nunca versionar `.env` ni exponer `DB_PASSWORD` / `GROQ_API_KEY` en el frontend.
 
+## Autoría
+
 ## Credenciales de demostración
+
+Solo para entornos locales/demos (definidas en `backend/database/seed.sql`):
 
 Solo para entornos locales/demos (definidas en `backend/database/seed.sql`):
 
@@ -80,6 +84,10 @@ Solo para entornos locales/demos (definidas en `backend/database/seed.sql`):
 | USER | `ciudadano@sentinel.local` | `Ciudadano123` | `1234` |
 
 Las credenciales administrativas reales viven **únicamente** en el `backend/.env` local (`DEFAULT_ADMIN_*`) y nunca se publican ni se versionan.
+
+## Autoría
+
+Desarrollado por Luis Ronaldo Valdizon Contreras (carnet 2022029, Grupo #6 — Fundación Kinal) con asistencia de IA en refactorización, validación, documentación y pruebas; el código fue revisado, adaptado y verificado por el autor (build + 22 tests en verde).
 
 ## Decisiones técnicas
 
